@@ -13,5 +13,6 @@
   <depend package="dummy-dependency-n-1" />
   <depend package="dummy-dependency-n" />
   -->
+  <rosdep name="osg" />
   <depend package="base/types" />
 </package>

@@ -1,0 +1,152 @@
+#include "Hough.hpp"
+
+namespace sonar_wall_hough
+{
+
+Hough::Hough(const Config& config)
+  : config(config)
+  , houghspace(config)
+  , lastAnalysisAngle(-1.0)
+{
+  accMax = 10;
+  double accAngle10 = M_PI / 4; //45°
+  accAsq = accAngle10*accAngle10/(-2* log(0.1));
+  accAngleIdx = houghspace.angle2Idx(-2*accAsq*log(1/accMax));
+  
+  localRangeDstIdx = houghspace.dst2Idx(10);
+  localRangeAngleIdx = houghspace.angle2Idx(M_PI/16);
+}
+
+Hough::~Hough()
+{
+}
+
+void Hough::accumulate(SonarPeak peak)
+{
+  int dstIdx;
+  int angleCenterIdx = houghspace.angle2Idx(peak.alpha.rad);
+  
+  for(int angleIdx = angleCenterIdx-accAngleIdx; angleIdx < angleCenterIdx+accAngleIdx; angleIdx++)
+  {
+    //calculate dst for this alpha and round to int
+    dstIdx = houghspace.dst2Idx((peak.distance * cos(houghspace.idx2Angle(angleIdx) - peak.alpha.rad)));
+    //get pointer to this houghspace bin
+    boost::uint8_t* ptr;
+    if((ptr = houghspace.at(angleIdx, dstIdx)) != NULL)
+    {
+      int accVal = accumulateValue(peak.alpha.rad - houghspace.idx2Angle(angleIdx));
+      //check for overflow first
+      if((int)*ptr + accVal > std::numeric_limits<boost::uint8_t>::max())
+	*ptr = std::numeric_limits<boost::uint8_t>::max();
+      else
+	*ptr += accVal;
+    }
+  }
+}
+
+void Hough::registerBeam(base::samples::SonarBeam beam)
+{
+  //std::cout << "Last analysis angle = " << lastAnalysisAngle << std::endl;
+  //std::cout << "registering beam with angle = " << beam.bearing << ".\n";
+  std::vector<SonarPeak> peaks = SonarPeak::preprocessSonarBeam(beam);
+  //append peaks to allPeaks
+  allPeaks.insert(allPeaks.end(), peaks.begin(), peaks.end());
+  for(int i = 0; i < (int)peaks.size(); i++)
+  {
+    accumulate(peaks.at(i));
+  }
+  
+  //do we have a full 360° scan?
+  if(lastAnalysisAngle > -1.0)
+  {
+    if(fabs(lastAnalysisAngle-beam.bearing.getRad()) < 0.001)
+    {
+      //we have a full 360° scan
+      analyzeHoughspace();
+    }
+  }
+  else
+    lastAnalysisAngle = beam.bearing.getRad();
+}
+
+void Hough::analyzeHoughspace()
+{
+  std::cout << "analysis started" << std::endl;
+  actualLines.clear();
+  
+  for(int dstIdx = -houghspace.getnumberOfPosDistances(); dstIdx <= houghspace.getnumberOfPosDistances(); dstIdx++)
+  {
+    for(int angleIdx = 0; angleIdx < houghspace.getNumberOfAngles(); angleIdx++)
+    {
+      if(*(houghspace.uncheckedAt(angleIdx, dstIdx)) > config.minLineVotes && isLocalMaximum(angleIdx, dstIdx))
+      {
+	//found valid line
+	actualLines.push_back(Line(houghspace.idx2Angle(angleIdx), houghspace.idx2Dst(dstIdx), *(houghspace.uncheckedAt(angleIdx, dstIdx))));
+	std::cout << "Found Line: alpha = " << actualLines.back().alpha << "[" << actualLines.back().alpha*180.0/M_PI << "°], d = " << actualLines.back().d << ", votes: " << actualLines.back().votes << std::endl;
+	std::cout << "indices are angleIdx = " << angleIdx << ", dstIdx = " << dstIdx << std::endl;
+      }
+    }
+  }
+  std::cout << "found " << actualLines.size() << " Lines" << std::endl;
+  
+  this->clear();
+}
+
+int Hough::accumulateValue(double deltaAngle)
+{
+  return accMax * exp(-0.5 * deltaAngle*deltaAngle/accAsq);
+}
+
+Houghspace* Hough::getHoughspace()
+{
+  return &houghspace;
+}
+
+std::vector< SonarPeak >* Hough::getAllPeaks()
+{
+  return &allPeaks;
+}
+
+std::vector< Line >* Hough::getActualLines()
+{
+  return &actualLines;
+}
+
+void Hough::clear()
+{
+  //clear Houghspace
+  houghspace.clear();
+  //clear allPeaks
+  allPeaks.clear();
+}
+
+bool Hough::isLocalMaximum(int angleIdx, int dstIdx)
+{
+  boost::uint8_t thisValue = *(houghspace.at(angleIdx, dstIdx));
+  for(int angleIdxCounter = angleIdx - localRangeAngleIdx; angleIdxCounter <= angleIdx + localRangeAngleIdx; angleIdxCounter++)
+  {
+    for(int dstIdxCounter = dstIdx - localRangeDstIdx; dstIdxCounter <= dstIdx + localRangeDstIdx; dstIdxCounter++)
+    {
+      //can be outside houghspace
+      if(houghspace.at(angleIdxCounter, dstIdxCounter) == NULL)
+	continue;
+      
+      if(*(houghspace.at(angleIdxCounter, dstIdxCounter)) > thisValue)
+      {
+	return false;
+      }
+      else if(*(houghspace.at(angleIdxCounter, dstIdxCounter)) == thisValue)
+      {
+	if(dstIdxCounter < dstIdx || (dstIdxCounter == dstIdx && angleIdxCounter < angleIdx))
+	  return false;
+      }
+    }
+  }
+  return true;
+}
+
+}//end namespace
+
+/*beckenfläche
+winkelschritt berechnen vs parameter
+tastendruck als ping-pong trigger ?*/
