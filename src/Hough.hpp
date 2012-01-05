@@ -28,20 +28,26 @@ public:
   void clear();
   
 private:
-  inline int accumulateValue(double deltaAngle);
+  inline int accumulateValue(double deltaAngle, int deltaDst);
   bool isLocalMaximum(int angleIdx, int dstIdx);
+  void postprocessLinesPool(std::vector<Line>& lines, double poolArea);
   Config config;
   Houghspace houghspace;
   double accAsq;
   double accMax;
+  double accDsq;
+  int dMax;
   std::vector<SonarPeak> allPeaks;
   std::vector<Line> actualLines;
   double lastAnalysisAngle;
   int localRangeDstIdx;
   int localRangeAngleIdx;
+  double angleTolerance;
+  double spatialResolution;
   
   //the farest delta angle being accumulated (1)
   int accAngleIdx;
+  int accDIdx;
 };
 
 }
