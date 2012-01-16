@@ -7,7 +7,6 @@ Hough::Hough(const Config& config)
   : config(config)
   , houghspace(config)
   , lastAnalysisAngle(-1.0)
-  , spatialResolution(-1.0)
 {
   accMax = 10;
   double accAngle10 = M_PI / 4; //45°
@@ -18,7 +17,7 @@ Hough::Hough(const Config& config)
   accDIdx = houghspace.dst2Idx(-2*accDsq*log(1/accMax));
   
   localRangeDstIdx = houghspace.dst2Idx(10);
-  localRangeAngleIdx = houghspace.angle2Idx(M_PI/16);
+  localRangeAngleIdx = houghspace.angle2Idx(M_PI/8);
   
   angleTolerance = M_PI / 32;
 }
@@ -28,7 +27,7 @@ Hough::~Hough()
 }
 
 void Hough::accumulate(SonarPeak peak)
-{  
+{
   int dstCenterIdx;
   int angleCenterIdx = houghspace.angle2Idx(peak.alpha.rad);
   
@@ -57,18 +56,15 @@ void Hough::accumulate(SonarPeak peak)
 }
 
 void Hough::registerBeam(base::samples::SonarBeam beam)
-{
-  if(spatialResolution < 0)
-    spatialResolution = beam.getSpatialResolution();
-  
+{  
   //std::cout << "Last analysis angle = " << lastAnalysisAngle << std::endl;
   //std::cout << "registering beam with angle = " << beam.bearing << ".\n";
-  std::vector<SonarPeak> peaks = SonarPeak::preprocessSonarBeam(beam);
+  std::vector<SonarPeak> peaks = SonarPeak::preprocessSonarBeam(beam, (int)(1.5/beam.getSpatialResolution()));
   //append peaks to allPeaks
   allPeaks.insert(allPeaks.end(), peaks.begin(), peaks.end());
   for(int i = 0; i < (int)peaks.size(); i++)
   {
-    accumulate(peaks.at(i));
+    //accumulate(peaks.at(i));
   }
   
   //do we have a full 360° scan?
@@ -161,12 +157,12 @@ bool Hough::isLocalMaximum(int angleIdx, int dstIdx)
 }
 
 void Hough::postprocessLinesPool(std::vector< Line >& lines, double poolArea)
-{
+{/*
   //find all parallel and opposite lying line pairs
   std::vector<std::pair<int, int> > pairs;
-  for(int i = 0; i < lines.size(); i++)
+  for(int i = 0; i < (int)lines.size(); i++)
   {
-    for(int j = i+1; j < lines.size(); j++)
+    for(int j = i+1; j < (int)lines.size(); j++)
     {
       //are lines i and j parallel and opposite?
       if((fabs(lines[i].alpha-lines[j].alpha) < angleTolerance && copysign(1.0,lines[i].d) != copysign(1.0,lines[j].d)) ||
@@ -180,9 +176,9 @@ void Hough::postprocessLinesPool(std::vector< Line >& lines, double poolArea)
   
   //find all corresponding pairs
   std::vector<std::pair<std::pair<int, int>, std::pair<int, int> > > quads;
-  for(int i = 0; i < pairs.size(); i++)
+  for(int i = 0; i < (int)pairs.size(); i++)
   {
-    for(int j = i+1; j < pairs.size(); j++)
+    for(int j = i+1; j < (int)pairs.size(); j++)
     {
       //TODO: Correct mean angles (i.e. 175° and 5°)
       double angleI = (lines[pairs[i].first].alpha + lines[pairs[i].second].alpha) /2;
@@ -195,7 +191,7 @@ void Hough::postprocessLinesPool(std::vector< Line >& lines, double poolArea)
   
   double minDeltatoPoolSize = INFINITY;
   int bestI = -1;
-  for(int i = 0; i < quads.size(); i++)
+  for(int i = 0; i < (int)quads.size(); i++)
   {
     //calculate area of rectangle
     int firstLength = lines[quads[i].first.first].d - lines[quads[i].first.second].d;
@@ -215,7 +211,7 @@ void Hough::postprocessLinesPool(std::vector< Line >& lines, double poolArea)
     newLines.push_back(lines[quads[bestI].second.first]);
     newLines.push_back(lines[quads[bestI].second.second]);
   }
-  lines = newLines;
+  lines = newLines;*/
 }
 
 

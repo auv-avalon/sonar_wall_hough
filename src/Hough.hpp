@@ -43,7 +43,6 @@ private:
   int localRangeDstIdx;
   int localRangeAngleIdx;
   double angleTolerance;
-  double spatialResolution;
   
   //the farest delta angle being accumulated (1)
   int accAngleIdx;
