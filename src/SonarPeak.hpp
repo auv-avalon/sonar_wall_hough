@@ -12,73 +12,22 @@ namespace sonar_wall_hough
       base::Angle alpha;
       boost::uint16_t distance;
       boost::uint8_t strength;
+      base::Angle sobelDirection;
+      static base::samples::SonarBeam preprevious;
+      static base::samples::SonarBeam previous;
+      static base::samples::SonarBeam actual;
+      static base::samples::SonarBeam next;
       
-      SonarPeak()
-	:alpha()
-	,distance()
-	,strength()
-      {
-      }
+      static base::samples::SonarBeam preprevious2;
+      static base::samples::SonarBeam previous2;
+      static base::samples::SonarBeam actual2;
+      static base::samples::SonarBeam next2;
       
-      SonarPeak(base::Angle alpha, boost::uint16_t distance, boost::uint8_t strength)
-	:alpha(alpha)
-	,distance(distance)
-	,strength(strength)
-      {
-      }
+      SonarPeak();
+      SonarPeak(base::Angle alpha, boost::uint16_t distance, boost::uint8_t strength, base::Angle sobelDirection);
       
-      static std::vector<SonarPeak> preprocessSonarBeam(base::samples::SonarBeam sonarBeam)
-      {
-	int minDistance = 25;
-	int sonarThreshold = 20;
-	//int minDistBetweenMaxima = 50; //TODO: dynamisch
-	
-	std::vector<SonarPeak> peaks;
-	//beam must have min 3 entries
-	if(sonarBeam.beam.size() < 3)
-	  return peaks;
-	
-	for(int i = minDistance; i < (int)sonarBeam.beam.size()-1; i++)
-	{
-	  if(sonarBeam.beam.at(i) >= sonarThreshold)
-	  {
-	    if(sonarBeam.beam.at(i) > sonarBeam.beam.at(i-1) && sonarBeam.beam.at(i) > sonarBeam.beam.at(i+1))
-	    {
-	      //found local maximum above threshold
-	      peaks.push_back(SonarPeak(sonarBeam.bearing, i, sonarBeam.beam.at(i)));
-	    }
-	  }
-	}
-	//is last entry possible peak?
-	if(sonarBeam.beam.back() > sonarThreshold && sonarBeam.beam.back() > sonarBeam.beam.at(sonarBeam.beam.size()-2))
-	{
-	  peaks.push_back(SonarPeak(sonarBeam.bearing, sonarBeam.beam.size()-1, sonarBeam.beam.back()));
-	}
-	
-	/*
-	//if peaks are too close, erase smaller one
-	std::vector<SonarPeak>::iterator it = peaks.begin();
-	while(it < peaks.end()-1)
-	{
-	  if((it+1)->distance - it->distance < minDistBetweenMaxima)
-	  {
-	    if(it->strength > (it+1)->strength)
-	    {
-	      peaks.erase(it+1);
-	    }
-	    else
-	    {
-	      peaks.erase(it);
-	      it++;
-	    }
-	  }
-	  else
-	  {
-	    it++;
-	  }
-	}
-	      return peaks;*/
-      }
+      static std::vector<SonarPeak> preprocessSonarBeam(base::samples::SonarBeam afternext, int closestBin);
+      static std::vector<SonarPeak> preprocessSonarBeam2(base::samples::SonarBeam afternext2, int closestBin);
     };
 
 }

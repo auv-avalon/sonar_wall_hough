@@ -7,6 +7,11 @@ namespace sonar_wall_hough
   base::samples::SonarBeam SonarPeak::actual = base::samples::SonarBeam();
   base::samples::SonarBeam SonarPeak::next = base::samples::SonarBeam();
   
+  base::samples::SonarBeam SonarPeak::preprevious2 = base::samples::SonarBeam();
+  base::samples::SonarBeam SonarPeak::previous2 = base::samples::SonarBeam();
+  base::samples::SonarBeam SonarPeak::actual2 = base::samples::SonarBeam();
+  base::samples::SonarBeam SonarPeak::next2 = base::samples::SonarBeam();
+  
   SonarPeak::SonarPeak()
     :alpha()
     ,distance()
@@ -25,7 +30,7 @@ namespace sonar_wall_hough
   
   std::vector<SonarPeak> SonarPeak::preprocessSonarBeam(base::samples::SonarBeam afternext, int closestBin)
   {
-    std::vector<SonarPeak> peaks;
+    base::samples::SonarBeam filtered;
     
     if(preprevious.beam.empty())
     {
@@ -34,16 +39,21 @@ namespace sonar_wall_hough
       actual = next;
       next = afternext;
       
-      return peaks;
+      return std::vector<SonarPeak>();
     }
+    
+    filtered.bearing = actual.bearing;
+    filtered.beam.resize(actual.beam.size());
     
     //make filtering (gauss * sobel)
     int resDst, resPhi;
+    std::vector<uint8_t>::iterator flt = filtered.beam.begin()+closestBin;
+    
     std::vector<uint8_t>::iterator ppr = preprevious.beam.begin()+closestBin;
     std::vector<uint8_t>::iterator prv = previous.beam.begin()+closestBin;
     std::vector<uint8_t>::iterator nxt = next.beam.begin()+closestBin;
     std::vector<uint8_t>::iterator anx = afternext.beam.begin()+closestBin;
-    for(std::vector<uint8_t>::iterator act = actual.beam.begin()+closestBin;act < actual.beam.end()-1; act++, ppr++, prv++, nxt++, anx++)
+    for(std::vector<uint8_t>::iterator act = actual.beam.begin()+closestBin;act < actual.beam.end()-1; flt++, act++, ppr++, prv++, nxt++, anx++)
     {
       
       /*    ppr prv act nxt anx
@@ -98,12 +108,12 @@ namespace sonar_wall_hough
       {
 	double direction = atan2(resDst,resPhi);
 	//std::cout << (int)resPhi << ", ";
-	peaks.push_back(SonarPeak(actual.bearing, act-actual.beam.begin(), strength, base::Angle::fromRad(direction)));
+	flt[0] = strength;
       }
     }
     
     //std::cout << std::endl;
-    
+    /*
     //non-maximum suppression (only in Dst-Direction)
     if(peaks.size() > 2)
     {
@@ -113,12 +123,69 @@ namespace sonar_wall_hough
 	  peaks.erase(it);
       }
     }
-    
+    */
     preprevious = previous;
     previous = actual;
     actual = next;
     next = afternext;
-    return peaks;
+    return preprocessSonarBeam2(filtered, closestBin);
   }
+  
+std::vector<SonarPeak> SonarPeak::preprocessSonarBeam2(base::samples::SonarBeam afternext2, int closestBin)
+{
+  std::vector<SonarPeak> peaks;
+  
+  base::samples::SonarBeam filtered;
+    
+    if(preprevious2.beam.empty())
+    {
+      preprevious2 = previous2;
+      previous2 = actual2;
+      actual2 = next2;
+      next2 = afternext2;
+      
+      return peaks;
+    }
+  
+  //do a sobel + gauss filter
+  int resDst, resPhi;
+  std::vector<uint8_t>::iterator ppr = preprevious2.beam.begin()+closestBin;
+  std::vector<uint8_t>::iterator prv = previous2.beam.begin()+closestBin;
+  std::vector<uint8_t>::iterator nxt = next2.beam.begin()+closestBin;
+  std::vector<uint8_t>::iterator anx = afternext2.beam.begin()+closestBin;
+  for(std::vector<uint8_t>::iterator act = actual2.beam.begin()+closestBin;act < actual2.beam.end()-2; act++, ppr++, prv++, nxt++, anx++)
+  {
+    resPhi = (1 * ppr[2])  + (2 *prv[2]) + ( -2 *nxt[2]) + ( -1 * anx[2])  +
+	       (4 * ppr[1])  + (8 *prv[1]) + ( -8 *nxt[1]) + (-4 * anx[1])  +
+	       (6 * ppr[0])  + (12 *prv[0]) + (-12 *nxt[0]) + (-6 * anx[0])  +
+	       (4 * ppr[-1])  + (2 *prv[-1]) + ( -2 *nxt[-1]) + ( -4 * anx[-1])  +
+	       (1 * ppr[-2])  + (2 *prv[-2]) + (-2 *nxt[-2]) + ( -1 * anx[-2]);
+    resPhi /= 16;
+    
+    resDst = (1 * ppr[2])  + (4 *prv[2]) + (6 * act[2]) + (4 *nxt[2]) + (1 * anx[2])  +
+	       (2 * ppr[1])  + (8 *prv[1]) + (12 * act[1]) + (8 *nxt[1]) + (2 * anx[1])  +
+	       ( -2 * ppr[-1])  + (-8 *prv[-1]) + (-12* act[-1]) + (-8 *nxt[-1]) + (-2 * anx[-1])  +
+	       (-1 * ppr[-2])  + (-4 *prv[-2]) + (-6 * act[-2]) + (-4 *nxt[-2]) + (-1 * anx[-2]);
+    resDst /= 16;
+    
+    uint8_t strength = sqrt(resDst*resDst+resPhi*resPhi);
+    //std::cout << (int)resPhi << std::endl;
+    if(strength > 50)
+    {
+      double direction = atan2(resDst,resPhi);
+      //std::cout << (int)resPhi << ", ";
+      peaks.push_back(SonarPeak(actual2.bearing, (act-actual2.beam.begin()), strength, base::Angle::fromRad(direction)));
+    }
+    
+  }
+    
+  preprevious2 = previous2;
+  previous2 = actual2;
+  actual2 = next2;
+  next2 = afternext2;
+  
+  return peaks;
+}
+
   
 } //End namespace
