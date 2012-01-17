@@ -12,22 +12,9 @@ namespace sonar_wall_hough
       base::Angle alpha;
       boost::uint16_t distance;
       boost::uint8_t strength;
-      base::Angle sobelDirection;
-      static base::samples::SonarBeam preprevious;
-      static base::samples::SonarBeam previous;
-      static base::samples::SonarBeam actual;
-      static base::samples::SonarBeam next;
       
-      static base::samples::SonarBeam preprevious2;
-      static base::samples::SonarBeam previous2;
-      static base::samples::SonarBeam actual2;
-      static base::samples::SonarBeam next2;
-      
-      SonarPeak();
-      SonarPeak(base::Angle alpha, boost::uint16_t distance, boost::uint8_t strength, base::Angle sobelDirection);
-      
-      static std::vector<SonarPeak> preprocessSonarBeam(base::samples::SonarBeam afternext, int closestBin);
-      static std::vector<SonarPeak> preprocessSonarBeam2(base::samples::SonarBeam afternext2, int closestBin);
+      SonarPeak():alpha(base::Angle::fromRad(0)),distance(0),strength(0){};
+      SonarPeak(base::Angle alpha, boost::uint16_t distance, boost::uint8_t strength):alpha(alpha),distance(distance),strength(strength){};
     };
 
 }

@@ -7,6 +7,7 @@ Hough::Hough(const Config& config)
   : config(config)
   , houghspace(config)
   , lastAnalysisAngle(-1.0)
+  , filter(5)
 {
   accMax = 10;
   double accAngle10 = M_PI / 4; //45°
@@ -59,7 +60,7 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
 {  
   //std::cout << "Last analysis angle = " << lastAnalysisAngle << std::endl;
   //std::cout << "registering beam with angle = " << beam.bearing << ".\n";
-  std::vector<SonarPeak> peaks = SonarPeak::preprocessSonarBeam(beam, (int)(1.5/beam.getSpatialResolution()));
+  std::vector<SonarPeak> peaks = filter.filter(beam, (int)(1.5/beam.getSpatialResolution()));
   //append peaks to allPeaks
   allPeaks.insert(allPeaks.end(), peaks.begin(), peaks.end());
   for(int i = 0; i < (int)peaks.size(); i++)

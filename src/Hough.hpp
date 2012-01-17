@@ -9,6 +9,7 @@
 #include "Line.hpp"
 #include "Houghspace.hpp"
 #include "SonarPeak.hpp"
+#include "FilterHelper.hpp"
 
 namespace sonar_wall_hough 
 {
@@ -33,6 +34,7 @@ private:
   void postprocessLinesPool(std::vector<Line>& lines, double poolArea);
   Config config;
   Houghspace houghspace;
+  Filter filter;
   double accAsq;
   double accMax;
   double accDsq;
