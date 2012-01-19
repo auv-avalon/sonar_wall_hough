@@ -4,7 +4,9 @@ namespace sonar_wall_hough
 {
   MinWindow::MinWindow(int kernelSize)
     :kernelSize(kernelSize)
-    ,minDeque(kernelSize)
+    ,minDeque(kernelSize+1)
+    ,idxDeque(kernelSize+1)
+    ,lastIdx(0)
   {
   }
 
@@ -12,15 +14,43 @@ namespace sonar_wall_hough
   {
   }
 
+  uint8_t MinWindow::pushValue()
+  {
+    //push maximum possible value
+    return pushValue(std::numeric_limits<uint8_t>::max());
+  }
+  
   uint8_t MinWindow::pushValue(uint8_t value)
   {
-    //TODO implement 
-    return value;
+    //delete all elements being greater than value
+    while(!minDeque.empty() && minDeque.back() > value)
+    {
+      minDeque.pop_back();
+      idxDeque.pop_back();
+    }
+    //insert new value at end
+    minDeque.push_back(value);
+    idxDeque.push_back(lastIdx);
+    
+    //pop front if idx is out of kernel
+    if(lastIdx - idxDeque.front() >= kernelSize)
+    {
+      minDeque.pop_front();
+      idxDeque.pop_front();
+    }
+    
+    //increase lastIdx for next run
+    lastIdx++;
+    
+    //return minimum which is front of minDeque
+    return minDeque.front();
   }
   
   void MinWindow::clear()
   {
     minDeque.clear();
+    idxDeque.clear();
+    lastIdx = 0;
   }
   
   BeamFilterDst::BeamFilterDst(FilterType type, int kernelSize)
@@ -53,7 +83,17 @@ namespace sonar_wall_hough
     {
       if(type == minimum)
       {
-	*out = minWindow->pushValue(*in);
+	//first fill the minWindow
+	if(in - sonarBeam.beam.begin() < kernelSize/2)
+	{
+	  minWindow->pushValue(*in);
+	  //do not proceed with out
+	  out--;
+	}
+	else
+	{
+	  *out = minWindow->pushValue(*in);
+	}
       }
       else if(type == sobelGaussDst)
       {
@@ -76,6 +116,17 @@ namespace sonar_wall_hough
 	  temp = abs(0.25*in[2] + in[1] + 1.5*in[0] + in[-1] + 0.25*in[-2]); //TODO automatic kernel generation
 	  *out = temp > 255 ? 255 : temp;
 	}
+      }
+    }
+    
+    //fill rest of out if in minimum type
+    if(type == minimum)
+    {
+      int i = 0;
+      while(out < filteredBeam.beam.end())
+      {
+	*out = minWindow->pushValue();
+	out++;
       }
     }
     return filteredBeam;

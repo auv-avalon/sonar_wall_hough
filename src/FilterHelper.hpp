@@ -16,10 +16,13 @@ namespace sonar_wall_hough
     MinWindow(int kernelSize);
     ~MinWindow();
     uint8_t pushValue(uint8_t value);
+    uint8_t pushValue();
     void clear();
   private:
     int kernelSize;
     std::deque<uint8_t> minDeque;
+    std::deque<int> idxDeque;
+    int lastIdx;
   };
   
   class BeamFilterDst
