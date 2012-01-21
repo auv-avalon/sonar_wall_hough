@@ -2,12 +2,14 @@
 #define _SONAR_WALL_HOUGH_CONFIG_HPP_
 
 #include <iostream>
+#include <stdint.h>
 
 namespace sonar_wall_hough
 {
   struct Config
   {
     double sensorAngularResolution;
+    uint8_t filterThreshold;
     int anglesPerBin;
     int maxDistance;
     int distancesPerBin;
@@ -15,6 +17,7 @@ namespace sonar_wall_hough
 
     Config()
 	: sensorAngularResolution(0)
+	, filterThreshold(0)
 	, anglesPerBin(0)
 	, maxDistance(0)
 	, distancesPerBin(0)

@@ -41,7 +41,9 @@ private:
   int dMax;
   std::vector<SonarPeak> allPeaks;
   std::vector<Line> actualLines;
-  double lastAnalysisAngle;
+  double startAngle;
+  int scanDirection;
+  double lastAngle;
   int localRangeDstIdx;
   int localRangeAngleIdx;
   double angleTolerance;

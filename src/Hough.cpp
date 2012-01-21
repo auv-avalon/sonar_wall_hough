@@ -6,8 +6,10 @@ namespace sonar_wall_hough
 Hough::Hough(const Config& config)
   : config(config)
   , houghspace(config)
-  , lastAnalysisAngle(-1.0)
-  , filter(5)
+  , startAngle(-1.0)
+  , scanDirection(0)
+  , lastAngle(-1.0)
+  , filter(5, config.filterThreshold)
 {
   accMax = 10;
   double accAngle10 = M_PI / 4; //45°
@@ -68,17 +70,41 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
     //accumulate(peaks.at(i));
   }
   
-  //do we have a full 360° scan?
-  if(lastAnalysisAngle > -1.0)
+  //do we have a full 360° scan or a change of direction (ping-pong)?
+  double actAngle = beam.bearing.getRad();
+  if(actAngle < 0.0)
+    actAngle += 2*M_PI;
+  
+  if(lastAngle <= -1.0)
   {
-    if(fabs(lastAnalysisAngle-beam.bearing.getRad()) < 0.001)
-    {
-      //we have a full 360° scan
-      analyzeHoughspace();
-    }
+    startAngle = actAngle;
   }
   else
-    lastAnalysisAngle = beam.bearing.getRad();
+  {
+    //what is the actual Direction?
+    int actDir = (int)copysign(1.0, actAngle-lastAngle);
+    if(fabs(actAngle-lastAngle) > M_PI)
+      actDir *= -1;
+    
+    if(scanDirection == 0)
+      scanDirection = actDir;
+    else
+    {
+      //has direction cchanged?
+      if(actDir != scanDirection)
+      {
+	scanDirection = actDir;
+	startAngle = actAngle;
+	analyzeHoughspace();
+      }
+      else if(startAngle == actAngle)
+      {
+	//we have a full 360° scan
+	analyzeHoughspace();
+      }
+    }
+  }  
+  lastAngle = actAngle;
 }
 
 void Hough::analyzeHoughspace()

@@ -206,8 +206,9 @@ namespace sonar_wall_hough
     return filteredBeam;
   }
 
-  Filter::Filter(int kernelSize)
-    :filterDstMin(minimum, kernelSize)
+  Filter::Filter(int kernelSize, uint8_t threshold)
+    :threshold(threshold)
+    ,filterDstMin(minimum, kernelSize)
     ,filterDstSGDst(sobelGaussDst, kernelSize)
     ,filterDstSGPhi(sobelGaussPhi, kernelSize)
     ,filterPhiMin(minimum, kernelSize)
@@ -236,7 +237,6 @@ namespace sonar_wall_hough
     base::samples::SonarBeam fullFilteredPhi = filterPhiSGPhi.filter(filterDstSGPhi.filter(minFilteredBeam));
     
     //apply a threshold and push into SonarPeak vector
-    int threshold = 0;
     uint8_t strength;
     for(int i = minDistance; i < fullFilteredDst.beam.size(); i++)
     {
