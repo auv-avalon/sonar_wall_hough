@@ -20,7 +20,7 @@ class Hough
 public:
   Hough(const Config& config = Config());
   ~Hough();
-  void accumulate(SonarPeak peak);
+  void accumulate(std::vector<SonarPeak> peaks);
   void registerBeam(base::samples::SonarBeam beam);
   void analyzeHoughspace();
   std::vector<SonarPeak>* getAllPeaks();
@@ -29,7 +29,7 @@ public:
   void clear();
   
 private:
-  inline int accumulateValue(double deltaAngle, int deltaDst);
+  inline int accumulateValue(double deltaAngle, int deltaDst, SonarPeak& peak);
   bool isLocalMaximum(int angleIdx, int dstIdx);
   void postprocessLinesPool(std::vector<Line>& lines, double poolArea);
   Config config;

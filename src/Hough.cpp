@@ -29,30 +29,37 @@ Hough::~Hough()
 {
 }
 
-void Hough::accumulate(SonarPeak peak)
+void Hough::accumulate(std::vector<SonarPeak> peaks)
 {
   int dstCenterIdx;
-  int angleCenterIdx = houghspace.angle2Idx(peak.alpha.rad);
+  int angleCenterIdx = houghspace.angle2Idx(peaks[0].alpha.rad); //all peaks have the same angle
+  double angle = peaks[0].alpha.rad;
+  boost::uint8_t* ptr;
+  boost::uint16_t newValue;
   
   for(int angleIdx = angleCenterIdx-accAngleIdx; angleIdx < angleCenterIdx+accAngleIdx; angleIdx++)
   {
-    //calculate dst for this alpha
-    dstCenterIdx = houghspace.dst2Idx((peak.distance * cos(houghspace.idx2Angle(angleIdx) - peak.alpha.rad)));
-    //std::cout << "dstCenterIdx = " << dstCenterIdx << std::endl;
-    for(int dstIdx = dstCenterIdx-accDIdx; dstIdx < dstCenterIdx+accDIdx; dstIdx++)
+    for(std::vector<SonarPeak>::iterator it = peaks.begin(); it < peaks.end(); it++)
     {
-      //get pointer to this houghspace bin
-      boost::uint8_t* ptr;
-      if((ptr = houghspace.at(angleIdx, dstIdx)) != NULL)
+      //calculate dst for this alpha and this peak
+      dstCenterIdx = houghspace.dst2Idx((it->distance * cos(houghspace.idx2Angle(angleIdx) - angle)));
+      //std::cout << "dstCenterIdx = " << dstCenterIdx << std::endl;
+      
+      for(int dstIdx = dstCenterIdx-accDIdx; dstIdx < dstCenterIdx+accDIdx; dstIdx++)
       {
-	int accVal = accumulateValue(peak.alpha.rad - houghspace.idx2Angle(angleIdx), houghspace.idx2Dst(dstCenterIdx) - houghspace.idx2Dst(dstIdx));
-	//std::cout << "at angleIdx " << angleIdx << ", dstIdx " << dstIdx << ": " << accVal<< std::endl;
-	//check for overflow first
-	//std::cout << "adding " << 0.01 * accVal * peak.strength << std::endl;
-	if((int)*ptr + 0.01 * accVal * peak.strength > std::numeric_limits<boost::uint8_t>::max())
-	  *ptr = std::numeric_limits<boost::uint8_t>::max();
-	else
-	  *ptr += (int)(0.01 * accVal * peak.strength);
+	//get pointer to this houghspace bin
+	if((ptr = houghspace.at(angleIdx, dstIdx)) != NULL)
+	{
+	  int accVal = accumulateValue(angle - houghspace.idx2Angle(angleIdx), houghspace.idx2Dst(dstCenterIdx) - houghspace.idx2Dst(dstIdx), *it);
+	  //std::cout << "at angleIdx " << angleIdx << ", dstIdx " << dstIdx << ": " << accVal<< std::endl;
+	  //check for overflow first
+	  newValue = accVal + (*ptr);
+	  //std::cout << "making " << (int)*ptr << "to " << (int)newValue << std::endl;
+	  if(newValue > std::numeric_limits<boost::uint8_t>::max())
+	    *ptr = std::numeric_limits<boost::uint8_t>::max();
+	  else
+	    *ptr = (boost::uint8_t)newValue;
+	}
       }
     }
   }
@@ -65,10 +72,10 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
   std::vector<SonarPeak> peaks = filter.filter(beam, (int)(1.5/beam.getSpatialResolution()));
   //append peaks to allPeaks
   allPeaks.insert(allPeaks.end(), peaks.begin(), peaks.end());
-  for(int i = 0; i < (int)peaks.size(); i++)
-  {
-    accumulate(peaks.at(i));
-  }
+  
+  //accumulate peaks to houghspace (all peaks have the same bearing)
+  if(!peaks.empty())
+    accumulate(peaks);
   
   //do we have a full 360° scan or a change of direction (ping-pong)?
   double actAngle = beam.bearing.getRad();
@@ -130,9 +137,9 @@ void Hough::analyzeHoughspace()
   this->clear();
 }
 
-int Hough::accumulateValue(double deltaAngle, int deltaDst)
+int Hough::accumulateValue(double deltaAngle, int deltaDst, SonarPeak& peak)
 {
-  return accMax * exp(-0.5 * deltaAngle*deltaAngle/accAsq) * exp(-0.5 * deltaDst*deltaDst/accDsq);
+  return 0.01 * peak.strength * accMax * exp(-0.5 * deltaAngle*deltaAngle/accAsq) * exp(-0.5 * deltaDst*deltaDst/accDsq);
 }
 
 Houghspace* Hough::getHoughspace()
