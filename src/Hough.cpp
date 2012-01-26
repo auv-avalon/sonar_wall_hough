@@ -34,7 +34,6 @@ void Hough::accumulate(SonarPeak peak)
   int dstCenterIdx;
   int angleCenterIdx = houghspace.angle2Idx(peak.alpha.rad);
   
-  //std::cout << "S T A R T" << std::endl;
   for(int angleIdx = angleCenterIdx-accAngleIdx; angleIdx < angleCenterIdx+accAngleIdx; angleIdx++)
   {
     //calculate dst for this alpha
@@ -49,10 +48,11 @@ void Hough::accumulate(SonarPeak peak)
 	int accVal = accumulateValue(peak.alpha.rad - houghspace.idx2Angle(angleIdx), houghspace.idx2Dst(dstCenterIdx) - houghspace.idx2Dst(dstIdx));
 	//std::cout << "at angleIdx " << angleIdx << ", dstIdx " << dstIdx << ": " << accVal<< std::endl;
 	//check for overflow first
-	if((int)*ptr + accVal > std::numeric_limits<boost::uint8_t>::max())
+	//std::cout << "adding " << 0.01 * accVal * peak.strength << std::endl;
+	if((int)*ptr + 0.01 * accVal * peak.strength > std::numeric_limits<boost::uint8_t>::max())
 	  *ptr = std::numeric_limits<boost::uint8_t>::max();
 	else
-	  *ptr += accVal;
+	  *ptr += (int)(0.01 * accVal * peak.strength);
       }
     }
   }
@@ -67,7 +67,7 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
   allPeaks.insert(allPeaks.end(), peaks.begin(), peaks.end());
   for(int i = 0; i < (int)peaks.size(); i++)
   {
-    //accumulate(peaks.at(i));
+    accumulate(peaks.at(i));
   }
   
   //do we have a full 360° scan or a change of direction (ping-pong)?

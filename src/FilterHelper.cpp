@@ -236,14 +236,18 @@ namespace sonar_wall_hough
     //Dst Directed sobel
     base::samples::SonarBeam fullFilteredPhi = filterPhiSGPhi.filter(filterDstSGPhi.filter(minFilteredBeam));
     
-    //apply a threshold and push into SonarPeak vector
-    uint8_t strength;
+    //apply a threshold and push into SonarPeak vector if vaule is local maximum
+    uint8_t strength, strengthPre = 0, strengthPrePre = 0;
     for(int i = minDistance; i < fullFilteredDst.beam.size(); i++)
     {
       strength = sqrt(fullFilteredDst.beam[i] * fullFilteredDst.beam[i] + fullFilteredPhi.beam[i] * fullFilteredPhi.beam[i]);
       //std::cout << (int)strength << std::endl;
-      if(strength > threshold)
-	peaks.push_back(SonarPeak(fullFilteredDst.bearing, i, strength));
+      if(strengthPre > threshold && strengthPre > strength && strengthPre >= strengthPrePre)
+	peaks.push_back(SonarPeak(fullFilteredDst.bearing, i-1, strengthPre));
+      
+      //push strengths
+      strengthPrePre = strengthPre;
+      strengthPre = strength;
     }
     
     return peaks;
