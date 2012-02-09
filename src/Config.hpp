@@ -13,15 +13,17 @@ namespace sonar_wall_hough
     int anglesPerBin;
     int maxDistance;
     int distancesPerBin;
-    int minLineVotes;
+    double minLineVotesRatio;
+    int nrOfLines;
 
     Config()
-	: sensorAngularResolution(0)
+	: sensorAngularResolution(0.0)
 	, filterThreshold(0)
 	, anglesPerBin(0)
 	, maxDistance(0)
 	, distancesPerBin(0)
-	, minLineVotes(0)
+	, minLineVotesRatio(0.0)
+	, nrOfLines(0)
     {
     }   
 

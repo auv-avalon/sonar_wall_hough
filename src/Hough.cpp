@@ -123,7 +123,7 @@ void Hough::analyzeHoughspace()
   {
     for(int angleIdx = 0; angleIdx < houghspace.getNumberOfAngles(); angleIdx++)
     {
-      if(*(houghspace.uncheckedAt(angleIdx, dstIdx)) > config.minLineVotes && isLocalMaximum(angleIdx, dstIdx))
+      if(*(houghspace.uncheckedAt(angleIdx, dstIdx)) > config.minLineVotesRatio*allPeaks.size() && isLocalMaximum(angleIdx, dstIdx))
       {
 	//found valid line
 	actualLines.push_back(Line(houghspace.idx2Angle(angleIdx), houghspace.idx2Dst(dstIdx), *(houghspace.uncheckedAt(angleIdx, dstIdx))));
@@ -133,7 +133,7 @@ void Hough::analyzeHoughspace()
     }
   }
   std::cout << "found " << actualLines.size() << " Lines" << std::endl;
-    
+  postprocessLines();
   this->clear();
 }
 
@@ -190,67 +190,82 @@ bool Hough::isLocalMaximum(int angleIdx, int dstIdx)
   return true;
 }
 
-void Hough::postprocessLinesPool(std::vector< Line >& lines, double poolArea)
-{/*
-  //find all parallel and opposite lying line pairs
-  std::vector<std::pair<int, int> > pairs;
-  for(int i = 0; i < (int)lines.size(); i++)
+void Hough::postprocessLines()
+{
+  //für jede linie
+  // suche parallele linien
+  // suche 90° dazu liegende linien
+  //packe linie mit gefundenen zusammen in vector
+  //für jeden dieser vektoren
+  // wenn es mehr als 2 parallele oder mehr als 2 90° stehende gibt
+  // entferne schwächeren oder den mit besserem abstand
+  //addiere votes
+  //nimm vektor mit größtem votes
+  double angleTolerance = M_PI / 32; //TODO woanders hinpacken
+  
+  if(actualLines.size() <= 1)
+    return;
+    
+  //generate maps for matching lines (parallel(true) or perpendicular(false))
+  std::vector<std::set<int> > matches;
+  for(int i = 0; i < actualLines.size(); i++)
   {
-    for(int j = i+1; j < (int)lines.size(); j++)
+    std::set<int> match;
+    for(int j = 0; j < actualLines.size(); j++)
     {
-      //are lines i and j parallel and opposite?
-      if((fabs(lines[i].alpha-lines[j].alpha) < angleTolerance && copysign(1.0,lines[i].d) != copysign(1.0,lines[j].d)) ||
-	(fabs(fabs(lines[i].alpha-lines[j].alpha)-M_PI) < angleTolerance && copysign(1.0,lines[i].d) == copysign(1.0,lines[j].d))     )
+      //all lines have alpha [0-M_PI]
+      if(fabs(actualLines[i].alpha - actualLines[j].alpha) < angleTolerance)
       {
-	pairs.push_back(std::pair<int, int>(i, j));
+	//the lines are parallel
+	match.insert(j);
+      }
+      else if(fabs(fabs(actualLines[i].alpha - actualLines[j].alpha)-M_PI/2) < angleTolerance)
+      {
+	//the lines are perpendicular
+	match.insert(j);
       }
     }
+    //only store sets with more than 2 entries
+    if(match.size() >= 2)
+      matches.push_back(match);
   }
-  std::cout << "found " << pairs.size() << " pairs." << std::endl;
   
-  //find all corresponding pairs
-  std::vector<std::pair<std::pair<int, int>, std::pair<int, int> > > quads;
-  for(int i = 0; i < (int)pairs.size(); i++)
+  //delete maps which lines are a subset of another map
+  for(int i = 0; i < matches.size();)
   {
-    for(int j = i+1; j < (int)pairs.size(); j++)
+    bool isSubset = false;
+    for(int j = 0; j < matches.size(); j++)
     {
-      //TODO: Correct mean angles (i.e. 175° and 5°)
-      double angleI = (lines[pairs[i].first].alpha + lines[pairs[i].second].alpha) /2;
-      double angleJ = (lines[pairs[j].first].alpha + lines[pairs[j].second].alpha) /2;
-      if(fabs(fmod(fabs(angleI-angleJ), M_PI) - M_PI/2) < angleTolerance)
-	quads.push_back(std::pair<std::pair<int, int>, std::pair<int, int> >(pairs[i], pairs[j]));
+      if(i == j)
+	continue;
+      
+      if(includes(matches[j].begin(), matches[j].end(), matches[i].begin(), matches[i].end()))
+      {
+	//i is subset of j
+	isSubset = true;
+	break;
+      }
+    }
+    if(isSubset)
+    {
+      matches.erase(matches.begin()+i);
+    }
+    else
+    {
+      i++;
     }
   }
-  std::cout << "found " << quads.size() << " quads." << std::endl;
   
-  double minDeltatoPoolSize = INFINITY;
-  int bestI = -1;
-  for(int i = 0; i < (int)quads.size(); i++)
+  //print matches
+  for(int i = 0; i < matches.size(); i++)
   {
-    //calculate area of rectangle
-    int firstLength = lines[quads[i].first.first].d - lines[quads[i].first.second].d;
-    int secondLength = lines[quads[i].second.first].d - lines[quads[i].second.second].d;
-    double area = firstLength*spatialResolution * secondLength*spatialResolution;
-    if(fabs(area - poolArea) < minDeltatoPoolSize)
+    std::cout << "match " << i << " contains:" << std::endl;
+    for(std::set<int>::iterator it = matches[i].begin(); it != matches[i].end(); it++)
     {
-      minDeltatoPoolSize = fabs(area - poolArea);
-      bestI = i;
+      std::cout << "alpha = " << actualLines[*it].alpha << "[" << actualLines[*it].alpha*180.0/M_PI << "°], d = " << actualLines[*it].d << ", votes: " << actualLines[*it].votes << std::endl;
     }
   }
-  std::vector<Line> newLines;
-  if(bestI > -1)
-  {
-    newLines.push_back(lines[quads[bestI].first.first]);
-    newLines.push_back(lines[quads[bestI].first.second]);
-    newLines.push_back(lines[quads[bestI].second.first]);
-    newLines.push_back(lines[quads[bestI].second.second]);
-  }
-  lines = newLines;*/
 }
 
 
 }//end namespace
-
-/*beckenfläche
-winkelschritt berechnen vs parameter
-tastendruck als ping-pong trigger ?*/

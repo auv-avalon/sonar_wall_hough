@@ -5,6 +5,8 @@
 #include <base/samples/frame.h>
 #include <math.h>
 #include <limits.h>
+#include <set>
+#include <algorithm>
 #include "Config.hpp"
 #include "Line.hpp"
 #include "Houghspace.hpp"
@@ -31,7 +33,7 @@ public:
 private:
   inline int accumulateValue(double deltaAngle, int deltaDst, SonarPeak& peak);
   bool isLocalMaximum(int angleIdx, int dstIdx);
-  void postprocessLinesPool(std::vector<Line>& lines, double poolArea);
+  void postprocessLines();
   Config config;
   Houghspace houghspace;
   Filter filter;
