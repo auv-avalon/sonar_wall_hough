@@ -5,7 +5,6 @@
 #include <base/samples/frame.h>
 #include <math.h>
 #include <limits.h>
-#include <set>
 #include <algorithm>
 #include "Config.hpp"
 #include "Line.hpp"
@@ -49,6 +48,7 @@ private:
   int localRangeDstIdx;
   int localRangeAngleIdx;
   double angleTolerance;
+  double lastSpatialResolution;
   
   //the farest delta angle being accumulated (1)
   int accAngleIdx;

@@ -10,6 +10,7 @@ Hough::Hough(const Config& config)
   , scanDirection(0)
   , lastAngle(-1.0)
   , filter(5, config.filterThreshold)
+  , lastSpatialResolution(0.0)
 {
   accMax = 10;
   double accAngle10 = M_PI / 4; //45°
@@ -69,7 +70,8 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
 {  
   //std::cout << "Last analysis angle = " << lastAnalysisAngle << std::endl;
   //std::cout << "registering beam with angle = " << beam.bearing << ".\n";
-  std::vector<SonarPeak> peaks = filter.filter(beam, (int)(1.5/beam.getSpatialResolution()));
+  std::vector<SonarPeak> peaks = filter.filter(beam, (int)(1.5/beam.getSpatialResolution())); //TODO 1.5 auslagern
+  lastSpatialResolution = beam.getSpatialResolution();
   //append peaks to allPeaks
   allPeaks.insert(allPeaks.end(), peaks.begin(), peaks.end());
   
@@ -192,79 +194,10 @@ bool Hough::isLocalMaximum(int angleIdx, int dstIdx)
 
 void Hough::postprocessLines()
 {
-  //für jede linie
-  // suche parallele linien
-  // suche 90° dazu liegende linien
-  //packe linie mit gefundenen zusammen in vector
-  //für jeden dieser vektoren
-  // wenn es mehr als 2 parallele oder mehr als 2 90° stehende gibt
-  // entferne schwächeren oder den mit besserem abstand
-  //addiere votes
-  //nimm vektor mit größtem votes
-  double angleTolerance = M_PI / 32; //TODO woanders hinpacken
+  std::vector<int> validDistances;
+  validDistances.push_back(520);
   
-  if(actualLines.size() <= 1)
-    return;
-    
-  //generate maps for matching lines (parallel(true) or perpendicular(false))
-  std::vector<std::set<int> > matches;
-  for(int i = 0; i < actualLines.size(); i++)
-  {
-    std::set<int> match;
-    for(int j = 0; j < actualLines.size(); j++)
-    {
-      //all lines have alpha [0-M_PI]
-      if(fabs(actualLines[i].alpha - actualLines[j].alpha) < angleTolerance)
-      {
-	//the lines are parallel
-	match.insert(j);
-      }
-      else if(fabs(fabs(actualLines[i].alpha - actualLines[j].alpha)-M_PI/2) < angleTolerance)
-      {
-	//the lines are perpendicular
-	match.insert(j);
-      }
-    }
-    //only store sets with more than 2 entries
-    if(match.size() >= 2)
-      matches.push_back(match);
-  }
-  
-  //delete maps which lines are a subset of another map
-  for(int i = 0; i < matches.size();)
-  {
-    bool isSubset = false;
-    for(int j = 0; j < matches.size(); j++)
-    {
-      if(i == j)
-	continue;
-      
-      if(includes(matches[j].begin(), matches[j].end(), matches[i].begin(), matches[i].end()))
-      {
-	//i is subset of j
-	isSubset = true;
-	break;
-      }
-    }
-    if(isSubset)
-    {
-      matches.erase(matches.begin()+i);
-    }
-    else
-    {
-      i++;
-    }
-  }
-  
-  //print matches
-  for(int i = 0; i < matches.size(); i++)
-  {
-    std::cout << "match " << i << " contains:" << std::endl;
-    for(std::set<int>::iterator it = matches[i].begin(); it != matches[i].end(); it++)
-    {
-      std::cout << "alpha = " << actualLines[*it].alpha << "[" << actualLines[*it].alpha*180.0/M_PI << "°], d = " << actualLines[*it].d << ", votes: " << actualLines[*it].votes << std::endl;
-    }
-  }
+  actualLines = Line::selectLines(actualLines, validDistances);
 }
 
 
