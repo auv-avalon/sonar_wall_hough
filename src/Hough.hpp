@@ -28,6 +28,7 @@ public:
   std::vector<Line>* getActualLines();
   Houghspace* getHoughspace();
   void clear();
+  void setOrientation(double orientation);
   
 private:
   inline int accumulateValue(double deltaAngle, int deltaDst, SonarPeak& peak);
@@ -49,6 +50,8 @@ private:
   int localRangeAngleIdx;
   double angleTolerance;
   double lastSpatialResolution;
+  base::Angle lastOrientation;
+  base::Angle firstOrientation;
   
   //the farest delta angle being accumulated (1)
   int accAngleIdx;

@@ -11,6 +11,8 @@ Hough::Hough(const Config& config)
   , lastAngle(-1.0)
   , filter(5, config.filterThreshold)
   , lastSpatialResolution(0.0)
+  , lastOrientation(base::Angle::fromRad(0.0))
+  , firstOrientation(base::Angle::fromRad(0.0))
 {
   accMax = 10;
   double accAngle10 = M_PI / 4; //45°
@@ -37,6 +39,7 @@ void Hough::accumulate(std::vector<SonarPeak> peaks)
   double angle = peaks[0].alpha.rad;
   boost::uint8_t* ptr;
   boost::uint16_t newValue;
+  double downvoteNear;
   
   for(int angleIdx = angleCenterIdx-accAngleIdx; angleIdx < angleCenterIdx+accAngleIdx; angleIdx++)
   {
@@ -44,15 +47,23 @@ void Hough::accumulate(std::vector<SonarPeak> peaks)
     {
       //calculate dst for this alpha and this peak
       dstCenterIdx = houghspace.dst2Idx((it->distance * cos(houghspace.idx2Angle(angleIdx) - angle)));
+      
+      //calculate downvote for small peak distance
+      //dstCenterIdx is between 0 and houghspace.getnumberOfPosDistances()
+      double dstRatio = (double)dstCenterIdx / houghspace.getnumberOfPosDistances();
+      //downvoteNear = dstRatio;
+      downvoteNear = 1-exp(-0.25*dstRatio*dstRatio/0.0016);
+      
       //std::cout << "dstCenterIdx = " << dstCenterIdx << std::endl;
+      //std::cout << "downvoteNear = " << downvoteNear << std::endl;
       
       for(int dstIdx = dstCenterIdx-accDIdx; dstIdx < dstCenterIdx+accDIdx; dstIdx++)
       {
 	//get pointer to this houghspace bin
 	if((ptr = houghspace.at(angleIdx, dstIdx)) != NULL)
 	{
-	  int accVal = accumulateValue(angle - houghspace.idx2Angle(angleIdx), houghspace.idx2Dst(dstCenterIdx) - houghspace.idx2Dst(dstIdx), *it);
-	  //std::cout << "at angleIdx " << angleIdx << ", dstIdx " << dstIdx << ": " << accVal<< std::endl;
+	  int accVal = downvoteNear * accumulateValue(angle - houghspace.idx2Angle(angleIdx), houghspace.idx2Dst(dstCenterIdx) - houghspace.idx2Dst(dstIdx), *it);
+	  std::cout << "at angleIdx " << angleIdx << ", dstIdx " << dstIdx << ": " << accVal<< std::endl;
 	  //check for overflow first
 	  newValue = accVal + (*ptr);
 	  //std::cout << "making " << (int)*ptr << "to " << (int)newValue << std::endl;
@@ -70,7 +81,7 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
 {  
   //std::cout << "Last analysis angle = " << lastAnalysisAngle << std::endl;
   //std::cout << "registering beam with angle = " << beam.bearing << ".\n";
-  std::vector<SonarPeak> peaks = filter.filter(beam, (int)(1.5/beam.getSpatialResolution())); //TODO 1.5 auslagern
+  std::vector<SonarPeak> peaks = filter.filter(beam, (int)(2.5/beam.getSpatialResolution())); //TODO 1.5 auslagern
   lastSpatialResolution = beam.getSpatialResolution();
   //append peaks to allPeaks
   allPeaks.insert(allPeaks.end(), peaks.begin(), peaks.end());
@@ -165,6 +176,8 @@ void Hough::clear()
   houghspace.clear();
   //clear allPeaks
   allPeaks.clear();
+  
+  firstOrientation = lastOrientation;
 }
 
 bool Hough::isLocalMaximum(int angleIdx, int dstIdx)
@@ -196,9 +209,34 @@ void Hough::postprocessLines()
 {
   std::vector<int> validDistances;
   validDistances.push_back(520);
+  validDistances.push_back(624); //TODO
   
-  actualLines = Line::selectLines(actualLines, validDistances);
+  actualLines = Line::selectLines(actualLines, validDistances, (config.sensorAngularResolution*4/180*M_PI), true, true);
+  if(actualLines.size() < 2)
+    return;
+  
+  //which line is most likely the "base line"?
+  double basinAngle = config.basinAngle * M_PI / 180.0;
+  double diffA = fmod(fabs(M_PI+firstOrientation.getRad()+actualLines.front().alpha-basinAngle),M_PI);
+  double diffB = fmod(fabs(M_PI+firstOrientation.getRad()+actualLines.back().alpha-basinAngle),M_PI);
+  double rot;
+  if(diffA < diffB)
+    rot = -actualLines.front().alpha;
+  else
+  {
+    rot = -actualLines.back().alpha;
+  }
+  std::cout << "rotating about " << rot << std::endl;
+  /*for(int i = 0; i < actualLines.size(); i++)
+    actualLines[i].alpha += rot;*/
 }
+
+void Hough::setOrientation(double orientation)
+{
+  
+  this->lastOrientation = base::Angle::fromRad(orientation);
+}
+
 
 
 }//end namespace

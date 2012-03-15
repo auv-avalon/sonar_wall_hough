@@ -2,6 +2,7 @@
 #define _SONAR_WALL_HOUGH_LINE_HPP_
 
 #include <vector>
+#include <map>
 #include <algorithm>
 #include <math.h>
 #include <iostream>
@@ -17,8 +18,11 @@ namespace sonar_wall_hough
     int votes;
     
     Line(double alpha, int d, int votes);
+    bool operator<(const Line& other) const;
     
-    static std::vector<Line> selectLines(std::vector<Line> lines, std::vector<int> validDistances);
+    static std::vector<Line> selectLines(std::vector<Line> lines, std::vector<int> validDistances, double angleTolerance, bool alignLines, bool guessMissing);
+  private:
+    static std::vector<Line> selectByDistance(std::vector<Line> lines, std::vector<int> validDistances);
   };
   
 
