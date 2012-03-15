@@ -43,10 +43,13 @@ void Hough::accumulate(std::vector<SonarPeak> peaks)
   
   for(int angleIdx = angleCenterIdx-accAngleIdx; angleIdx < angleCenterIdx+accAngleIdx; angleIdx++)
   {
+    //std::cout << "angleIdx = " << angleIdx << std::endl;
     for(std::vector<SonarPeak>::iterator it = peaks.begin(); it < peaks.end(); it++)
     {
       //calculate dst for this alpha and this peak
       dstCenterIdx = houghspace.dst2Idx((it->distance * cos(houghspace.idx2Angle(angleIdx) - angle)));
+      
+      //std::cout << "angleIdx = " << angleIdx << ", dstCenterIdx = " << dstCenterIdx << std::endl;
       
       //calculate downvote for small peak distance
       //dstCenterIdx is between 0 and houghspace.getnumberOfPosDistances()
@@ -59,11 +62,12 @@ void Hough::accumulate(std::vector<SonarPeak> peaks)
       
       for(int dstIdx = dstCenterIdx-accDIdx; dstIdx < dstCenterIdx+accDIdx; dstIdx++)
       {
+	//std::cout << "hough.cpp angleIdx " << angleIdx << ", dstIdx " << dstIdx << std::endl;
 	//get pointer to this houghspace bin
 	if((ptr = houghspace.at(angleIdx, dstIdx)) != NULL)
 	{
 	  int accVal = downvoteNear * accumulateValue(angle - houghspace.idx2Angle(angleIdx), houghspace.idx2Dst(dstCenterIdx) - houghspace.idx2Dst(dstIdx), *it);
-	  std::cout << "at angleIdx " << angleIdx << ", dstIdx " << dstIdx << ": " << accVal<< std::endl;
+	  //std::cout << "at angleIdx " << angleIdx << ", dstIdx " << dstIdx << ": " << accVal<< std::endl;
 	  //check for overflow first
 	  newValue = accVal + (*ptr);
 	  //std::cout << "making " << (int)*ptr << "to " << (int)newValue << std::endl;

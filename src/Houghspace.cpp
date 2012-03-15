@@ -32,12 +32,26 @@ boost::uint8_t* Houghspace::at(double angle, int dst)
 
 boost::uint8_t* Houghspace::at(int angleIdx, int dstIdx)
 {
+  while(angleIdx < 0)
+  {
+    angleIdx += numberOfAngles;
+    dstIdx *= -1;
+  }
+  while(angleIdx > numberOfAngles)
+  {
+    angleIdx -= numberOfAngles;
+    dstIdx *= -1;
+  }
+  //does not work, modulo in c++ is strange...
+  /*
   angleIdx = angleIdx % numberOfAngles;
   if(angleIdx < 0)
   {
     angleIdx += numberOfAngles;
     dstIdx *= -1;
   }
+  std::cout << "at says now angleIdx = " << angleIdx << ", dstIdx = "<<dstIdx<<std::endl;
+  */
   if(dstIdx < -numberOfPosDistances || dstIdx > numberOfPosDistances)
   {
     //std::cout << "returning 0 at angleIdx = " << angleIdx << ", dstIdx = " << dstIdx << std::endl;
