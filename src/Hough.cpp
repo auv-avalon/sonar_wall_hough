@@ -85,7 +85,7 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
 {  
   //std::cout << "Last analysis angle = " << lastAnalysisAngle << std::endl;
   //std::cout << "registering beam with angle = " << beam.bearing << ".\n";
-  std::vector<SonarPeak> peaks = filter.filter(beam, (int)(2.5/beam.getSpatialResolution())); //TODO 1.5 auslagern
+  std::vector<SonarPeak> peaks = filter.filter(beam, (int)(config.minDistance/beam.getSpatialResolution()));
   lastSpatialResolution = beam.getSpatialResolution();
   //append peaks to allPeaks
   allPeaks.insert(allPeaks.end(), peaks.begin(), peaks.end());
@@ -211,16 +211,18 @@ bool Hough::isLocalMaximum(int angleIdx, int dstIdx)
 
 void Hough::postprocessLines()
 {
-  std::vector<int> validDistances;
-  validDistances.push_back(520);
-  validDistances.push_back(624); //TODO
+  //std::vector<int> validDistances;
+  std::pair<int,int> basinSize(config.basinHeight, config.basinWidth);
+  //validDistances.push_back((int)(config.basinHeight/lastSpatialResolution));
+  //validDistances.push_back((int)(config.basinWidth/lastSpatialResolution));
+  std::cout << lastSpatialResolution << std::endl;
   
-  actualLines = Line::selectLines(actualLines, validDistances, (config.sensorAngularResolution*4/180*M_PI), true, true);
+  actualLines = Line::selectLines(actualLines, basinSize, (config.sensorAngularResolution*4/180*M_PI), true, true);
   if(actualLines.size() < 2)
     return;
   
   //which line is most likely the "base line"?
-  double basinAngle = config.basinAngle * M_PI / 180.0;
+  /*double basinAngle = config.basinAngle * M_PI / 180.0;
   double diffA = fmod(fabs(M_PI+firstOrientation.getRad()+actualLines.front().alpha-basinAngle),M_PI);
   double diffB = fmod(fabs(M_PI+firstOrientation.getRad()+actualLines.back().alpha-basinAngle),M_PI);
   double rot;
@@ -230,7 +232,7 @@ void Hough::postprocessLines()
   {
     rot = -actualLines.back().alpha;
   }
-  std::cout << "rotating about " << rot << std::endl;
+  std::cout << "rotating about " << rot << std::endl;*/
   /*for(int i = 0; i < actualLines.size(); i++)
     actualLines[i].alpha += rot;*/
 }
@@ -238,7 +240,12 @@ void Hough::postprocessLines()
 void Hough::setOrientation(double orientation)
 {
   
-  this->lastOrientation = base::Angle::fromRad(orientation);
+  this->lastOrientation = base::Angle::fromRad(orientation + (config.angleDelta*M_PI/180.0));
+}
+
+base::Angle Hough::getOrientation()
+{
+  return firstOrientation;
 }
 
 
