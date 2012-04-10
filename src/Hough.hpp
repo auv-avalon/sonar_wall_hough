@@ -26,6 +26,7 @@ public:
   void analyzeHoughspace();
   std::vector<SonarPeak>* getAllPeaks();
   std::vector<Line>* getActualLines();
+  base::Angle getOrientation();
   Houghspace* getHoughspace();
   void clear();
   void setOrientation(double orientation);

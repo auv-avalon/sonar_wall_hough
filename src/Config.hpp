@@ -12,18 +12,24 @@ namespace sonar_wall_hough
     uint8_t filterThreshold;
     int anglesPerBin;
     int maxDistance;
+    double minDistance;
     int distancesPerBin;
     double minLineVotesRatio;
-    double basinAngle;
+    double angleDelta;
+    double basinHeight;
+    double basinWidth;
 
     Config()
 	: sensorAngularResolution(0.0)
 	, filterThreshold(0)
 	, anglesPerBin(0)
 	, maxDistance(0)
+	, minDistance(0.0)
 	, distancesPerBin(0)
 	, minLineVotesRatio(0.0)
-	, basinAngle(0)
+	, angleDelta(0)
+	, basinHeight(0.0)
+	, basinWidth(0.0)
     {
     }   
 
