@@ -13,14 +13,16 @@ Hough::Hough(const Config& config)
   , lastSpatialResolution(0.0)
   , lastOrientation(base::Angle::fromRad(0.0))
   , firstOrientation(base::Angle::fromRad(0.0))
+  , actualPosition(std::pair<double,double>(0.0,0.0))
 {
   accMax = 10;
-  double accAngle10 = M_PI / 4; //45°
-  int accD10 = 16;
+  double accAngle10 = M_PI * 3/8; //67.5°
+  int accD10 = 12;
   accAsq = accAngle10*accAngle10/(-2* log(0.1));
   accDsq = accD10*accD10/(-2*log(0.1));
   accAngleIdx = houghspace.angle2Idx(-2*accAsq*log(1/accMax));
   accDIdx = houghspace.dst2Idx(-2*accDsq*log(1/accMax));
+  //std::cout << "accDIdx = " << accDIdx << std::endl;
   
   localRangeDstIdx = houghspace.dst2Idx(10);
   localRangeAngleIdx = houghspace.angle2Idx(M_PI/8);
@@ -67,6 +69,7 @@ void Hough::accumulate(std::vector<SonarPeak> peaks)
 	if((ptr = houghspace.at(angleIdx, dstIdx)) != NULL)
 	{
 	  int accVal = downvoteNear * accumulateValue(angle - houghspace.idx2Angle(angleIdx), houghspace.idx2Dst(dstCenterIdx) - houghspace.idx2Dst(dstIdx), *it);
+	  
 	  //std::cout << "at angleIdx " << angleIdx << ", dstIdx " << dstIdx << ": " << accVal<< std::endl;
 	  //check for overflow first
 	  newValue = accVal + (*ptr);
@@ -85,6 +88,13 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
 {  
   //std::cout << "Last analysis angle = " << lastAnalysisAngle << std::endl;
   //std::cout << "registering beam with angle = " << beam.bearing << ".\n";
+  
+  //correct angle for this beam
+  double actAngle = beam.bearing.getRad();
+  beam.bearing = beam.bearing + (lastOrientation - firstOrientation);
+  //base::Angle bla = base::Angle::fromRad(angleCorrect);
+  //std::cout << "angle is " << beam.bearing << ", should be " << bla << std::endl;
+  
   std::vector<SonarPeak> peaks = filter.filter(beam, (int)(config.minDistance/beam.getSpatialResolution()));
   lastSpatialResolution = beam.getSpatialResolution();
   //append peaks to allPeaks
@@ -95,7 +105,6 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
     accumulate(peaks);
   
   //do we have a full 360° scan or a change of direction (ping-pong)?
-  double actAngle = beam.bearing.getRad();
   if(actAngle < 0.0)
     actAngle += 2*M_PI;
   
@@ -211,30 +220,25 @@ bool Hough::isLocalMaximum(int angleIdx, int dstIdx)
 
 void Hough::postprocessLines()
 {
-  //std::vector<int> validDistances;
   std::pair<int,int> basinSize(config.basinHeight, config.basinWidth);
-  //validDistances.push_back((int)(config.basinHeight/lastSpatialResolution));
-  //validDistances.push_back((int)(config.basinWidth/lastSpatialResolution));
-  std::cout << lastSpatialResolution << std::endl;
-  
-  actualLines = Line::selectLines(actualLines, basinSize, (config.sensorAngularResolution*4/180*M_PI), true, true);
-  if(actualLines.size() < 2)
+  actualLines = Line::selectLines(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*4/180*M_PI), firstOrientation.getRad(), true, true);
+  if(actualLines.size() < 4)
     return;
   
-  //which line is most likely the "base line"?
-  /*double basinAngle = config.basinAngle * M_PI / 180.0;
-  double diffA = fmod(fabs(M_PI+firstOrientation.getRad()+actualLines.front().alpha-basinAngle),M_PI);
-  double diffB = fmod(fabs(M_PI+firstOrientation.getRad()+actualLines.back().alpha-basinAngle),M_PI);
-  double rot;
-  if(diffA < diffB)
-    rot = -actualLines.front().alpha;
-  else
-  {
-    rot = -actualLines.back().alpha;
-  }
-  std::cout << "rotating about " << rot << std::endl;*/
-  /*for(int i = 0; i < actualLines.size(); i++)
-    actualLines[i].alpha += rot;*/
+  //calculate position
+  double xScale = fabs(actualLines[2].d-actualLines[3].d) / config.basinWidth;
+  double yScale = fabs(actualLines[0].d-actualLines[1].d) / config.basinHeight;
+  double xPos = -(actualLines[2].d + actualLines[3].d) / 2 / xScale;
+  double yPos = -(actualLines[0].d + actualLines[1].d) / 2 / yScale;
+  std::cout << "AUV at x = " << xPos << ", y = " << yPos << std::endl;
+  std::cout << "Scale deltas are x: "<<(xScale*lastSpatialResolution)<<", y: " << (yScale*lastSpatialResolution) << std::endl;
+  
+  actualPosition.first = xPos;
+  actualPosition.second = yPos;
+  
+  //x- and y-axis for debugging
+  actualLines.push_back(Line(actualLines[2].alpha,-xPos*xScale,0));
+  actualLines.push_back(Line(actualLines[0].alpha,-yPos*yScale,0));
 }
 
 void Hough::setOrientation(double orientation)
@@ -246,6 +250,11 @@ void Hough::setOrientation(double orientation)
 base::Angle Hough::getOrientation()
 {
   return firstOrientation;
+}
+
+std::pair< double, double > Hough::getActualPosition()
+{
+  return actualPosition;
 }
 
 

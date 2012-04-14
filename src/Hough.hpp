@@ -26,6 +26,7 @@ public:
   void analyzeHoughspace();
   std::vector<SonarPeak>* getAllPeaks();
   std::vector<Line>* getActualLines();
+  std::pair<double,double> getActualPosition();
   base::Angle getOrientation();
   Houghspace* getHoughspace();
   void clear();
@@ -44,6 +45,7 @@ private:
   int dMax;
   std::vector<SonarPeak> allPeaks;
   std::vector<Line> actualLines;
+  std::pair<double,double> actualPosition;
   double startAngle;
   int scanDirection;
   double lastAngle;

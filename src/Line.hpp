@@ -20,9 +20,9 @@ namespace sonar_wall_hough
     Line(double alpha, int d, int votes);
     bool operator<(const Line& other) const;
     
-    static std::vector<Line> selectLines(std::vector<Line> lines, std::pair<int,int> basinSize, double angleTolerance, bool alignLines, bool guessMissing);
+    static std::vector<Line> selectLines(std::vector<Line> lines, std::pair<int,int> basinSize, double spatialResolution, double angleTolerance, double orientation, bool alignLines, bool guessMissing);
   private:
-    static std::vector<Line> selectByDistance(std::vector<Line> lines, std::pair<int,int> basinSize);
+    static std::vector<Line> selectByDistance(std::vector<Line> lines, std::pair<int,int> basinSize, double spatialResolution);
   };
   
 

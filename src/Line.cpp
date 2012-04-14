@@ -32,7 +32,7 @@ bool Line::operator<(const Line& other) const
     return false;
 }
 
-std::vector< Line > Line::selectLines(std::vector< Line > lines, std::pair<int,int> basinSize, double angleTolerance, bool alignLines, bool guessMissing)
+std::vector< Line > Line::selectLines(std::vector< Line > lines, std::pair<int,int> basinSize, double spatialResolution, double angleTolerance, double orientation, bool alignLines, bool guessMissing)
 {
   if(lines.size() <= 1)
     return lines;
@@ -89,7 +89,7 @@ std::vector< Line > Line::selectLines(std::vector< Line > lines, std::pair<int,i
   std::vector<int> totalVotes(parallels.size(), 0);
   for(int i = 0; i < parallels.size(); i++)
   {
-    parallels[i] = selectByDistance(parallels[i], basinSize);
+    parallels[i] = selectByDistance(parallels[i], basinSize, spatialResolution);
     //calculate mean angle and sum of votes for each parallels-vector
     for(int j = 0; j < parallels[i].size(); j++)
     {
@@ -161,6 +161,42 @@ std::vector< Line > Line::selectLines(std::vector< Line > lines, std::pair<int,i
   
   if(guessMissing)
   {
+    //guess missing lines
+    std::vector<std::vector<Line> > bestPar;
+    bestPar.push_back(parallels[bestIdxA]);
+    bestPar.push_back(parallels[bestIdxB]);
+    for(int i = 0; i < 2; i++)
+    {
+      std::vector<Line> par = bestPar[i];
+      
+      if(par.size() < 2)
+      {
+	//is it more height or width borders of basin? (orientation points into y-direction of basin)
+	int neededDistance = 0;
+	double diff = fmod(fabs(par[0].alpha - orientation), M_PI);
+	if(diff < M_PI/4)
+	  neededDistance = basinSize.first / spatialResolution;
+	else
+	  neededDistance = basinSize.second / spatialResolution;
+	
+	//guess other line (must be on opposite side of auv)
+	int dNew = 0;
+	if(par[0].d > 0)
+	  dNew = par[0].d - neededDistance;
+	else
+	  dNew = par[0].d + neededDistance;
+	
+	if(diff < M_PI/4)
+	  par.insert(par.begin(), Line(par[0].alpha, dNew, 0));
+	else
+	  par.push_back(Line(par[0].alpha, dNew, 0));
+	
+	//std::cout << "added line : alpha = " << par[1].alpha << "[" << par[1].alpha*180.0/M_PI << "°], d = " << par[1].d << ", votes: " << par[1].votes << std::endl;
+      }
+      lines.insert(lines.end(), par.begin(), par.end());
+    }
+    
+    /*
     //guess the missing lines to always have 2x2 lines for the output
     if(parallels[bestIdxA].size()+parallels[bestIdxB].size() == 3)
     {
@@ -188,12 +224,10 @@ std::vector< Line > Line::selectLines(std::vector< Line > lines, std::pair<int,i
       else
 	newDiff = parallels[halfIdx].at(0).d - halfDiff;
       
-      parallels[halfIdx].push_back(Line(parallels[halfIdx].at(0).alpha, newDiff, 0));      
+      parallels[halfIdx].push_back(Line(parallels[halfIdx].at(0).alpha, newDiff, 0));
     }
+    */
   }
-  
-  lines.insert(lines.end(), parallels[bestIdxA].begin(), parallels[bestIdxA].end());
-  lines.insert(lines.end(), parallels[bestIdxB].begin(), parallels[bestIdxB].end());
   
   //print lines
   for(std::vector<Line>::iterator it = lines.begin(); it != lines.end(); it++)
@@ -204,7 +238,7 @@ std::vector< Line > Line::selectLines(std::vector< Line > lines, std::pair<int,i
   return lines;
 }
 
-std::vector< Line > Line::selectByDistance(std::vector< Line > lines, std::pair<int,int> basinSize)
+std::vector< Line > Line::selectByDistance(std::vector< Line > lines, std::pair<int,int> basinSize, double spatialResolution)
 {
   if(lines.size() < 2)
     return lines;
@@ -222,7 +256,8 @@ std::vector< Line > Line::selectByDistance(std::vector< Line > lines, std::pair<
       int distance = abs(lines[i].d - lines[j].d);
       for(int k = 0; k < 2; k++)
       {
-	int basinSizePart = k==0?basinSize.first:basinSize.second;
+	int basinSizePart = (k==0?basinSize.first:basinSize.second) / spatialResolution;
+	
 	double distDiff = abs(distance - basinSizePart) / (double)basinSizePart;
 	if(distDiff < 0.1)
 	{
