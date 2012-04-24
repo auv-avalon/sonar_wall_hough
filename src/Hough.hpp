@@ -31,6 +31,7 @@ public:
   Houghspace* getHoughspace();
   void clear();
   void setOrientation(double orientation);
+  double calculateError();
   
 private:
   inline int accumulateValue(double deltaAngle, int deltaDst, SonarPeak& peak);

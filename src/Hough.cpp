@@ -225,13 +225,14 @@ void Hough::postprocessLines()
   if(actualLines.size() < 4)
     return;
   
+  calculateError();  
+  
   //calculate position
   double xScale = fabs(actualLines[2].d-actualLines[3].d) / config.basinWidth;
   double yScale = fabs(actualLines[0].d-actualLines[1].d) / config.basinHeight;
   double xPos = -(actualLines[2].d + actualLines[3].d) / 2 / xScale;
   double yPos = -(actualLines[0].d + actualLines[1].d) / 2 / yScale;
   std::cout << "AUV at x = " << xPos << ", y = " << yPos << std::endl;
-  std::cout << "Scale deltas are x: "<<(xScale*lastSpatialResolution)<<", y: " << (yScale*lastSpatialResolution) << std::endl;
   
   actualPosition.first = xPos;
   actualPosition.second = yPos;
@@ -239,6 +240,33 @@ void Hough::postprocessLines()
   //x- and y-axis for debugging
   actualLines.push_back(Line(actualLines[2].alpha,-xPos*xScale,0));
   actualLines.push_back(Line(actualLines[0].alpha,-yPos*yScale,0));
+}
+
+double Hough::calculateError()
+{
+  //mean square error of peaks & line supporters
+  std::vector<int> lineSupporters(actualLines.size(), 0);
+  double meanSquareError = 0.0;
+  int nrOfPeaks = allPeaks.size();
+  for(int i = 0; i < nrOfPeaks; i++)
+  {
+    std::pair<int,double> lineDst = allPeaks[i].smallestDstFromLine(actualLines);
+    meanSquareError += (lineDst.second*lineDst.second)/nrOfPeaks;
+    if(lineDst.second <= 20) //TODO: property if needed
+    {
+      lineSupporters[lineDst.first]++;
+    }
+  }
+  
+  //distance of parallel lines
+  double xDiff = fabs(actualLines[2].d-actualLines[3].d) / config.basinWidth * lastSpatialResolution;
+  double yDiff = fabs(actualLines[0].d-actualLines[1].d) / config.basinHeight * lastSpatialResolution;
+  
+  //cout the values
+  std::cout << "QUALITY OF MEASUREMENT:" << std::endl;
+  std::cout << "difference of parallel walls is " << xDiff << " at x and " << yDiff << " at y." << std::endl;
+  std::cout << "Mean square error of peaks is " << meanSquareError << std::endl;
+  std::cout << "the wall's supporters: " << lineSupporters[0] << ", " << lineSupporters[1] << ", " << lineSupporters[2] << ", " <<lineSupporters[3] << std::endl;
 }
 
 void Hough::setOrientation(double orientation)
