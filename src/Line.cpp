@@ -32,6 +32,26 @@ bool Line::operator<(const Line& other) const
     return false;
 }
 
+std::pair< base::Vector3d, base::Vector3d > Line::toCartesian(const sonar_wall_hough::Line& limitA, const sonar_wall_hough::Line& limitB)
+{
+  if(alpha == limitA.alpha || alpha == limitB.alpha)
+    return std::pair<base::Vector3d, base::Vector3d>(base::Vector3d(0.0,0.0,0.0), base::Vector3d(10.0,0.0,0.0));
+  
+  double xA = (limitA.d-d*sin(limitA.alpha)/sin(alpha))/(cos(limitA.alpha)-cos(alpha)*sin(limitA.alpha)/sin(alpha));
+  double yA = (limitA.d-d*cos(limitA.alpha)/cos(alpha))/(sin(limitA.alpha)-sin(alpha)*cos(limitA.alpha)/cos(alpha));
+  
+  double xB = (limitB.d-d*sin(limitB.alpha)/sin(alpha))/(cos(limitB.alpha)-cos(alpha)*sin(limitB.alpha)/sin(alpha));
+  double yB = (limitB.d-d*cos(limitB.alpha)/cos(alpha))/(sin(limitB.alpha)-sin(alpha)*cos(limitB.alpha)/cos(alpha));
+  
+  /*
+  std::cout << "alpha = " << alpha << ", d = " << d << ", a_alpha = " << limitA.alpha << ", a_d = " << limitA.d << std::endl;
+  std::cout << "intersection: x = " << xA << ", y = " << yA << std::endl;
+  std::cout << "alpha = " << alpha << ", d = " << d << ", b_alpha = " << limitB.alpha << ", b_d = " << limitB.d << std::endl;
+  std::cout << "intersection: x = " << xB << ", y = " << yB << std::endl;
+  */
+  return std::pair<base::Vector3d, base::Vector3d>(base::Vector3d(xA, yA, 0.0), base::Vector3d(xB, yB, 0.0));
+}
+
 std::vector< Line > Line::selectLines(std::vector< Line > lines, std::pair<int,int> basinSize, double spatialResolution, double angleTolerance, double orientation, bool alignLines, bool guessMissing)
 {
   if(lines.size() <= 1)

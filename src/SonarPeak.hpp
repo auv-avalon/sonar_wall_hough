@@ -37,7 +37,14 @@ namespace sonar_wall_hough
 	  }
 	}
 	return std::pair<int,double>(whichLine, min);
-      }
+      };
+      
+      base::Vector3d toCartesian()
+      {
+	double x = distance * cos(alpha.getRad());
+	double y = distance * sin(alpha.getRad());
+	return base::Vector3d(x, y, 0.0);
+      };
     };
 
 }

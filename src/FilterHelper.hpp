@@ -55,12 +55,13 @@ namespace sonar_wall_hough
   class Filter
   {
   public:
-    Filter(int kernelSize, uint8_t threshold);
+    Filter(int kernelSize, uint8_t threshold, bool withMinimum);
     ~Filter();
     std::vector<SonarPeak> filter(base::samples::SonarBeam sonarBeam, int minDistance);
   
   private:
     uint8_t threshold;
+    bool withMinimum;
     BeamFilterDst filterDstMin;
     BeamFilterDst filterDstSGDst;
     BeamFilterDst filterDstSGPhi;

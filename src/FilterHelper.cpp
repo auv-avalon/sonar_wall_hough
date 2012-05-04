@@ -206,8 +206,9 @@ namespace sonar_wall_hough
     return filteredBeam;
   }
 
-  Filter::Filter(int kernelSize, uint8_t threshold)
+  Filter::Filter(int kernelSize, uint8_t threshold, bool withMinimum)
     :threshold(threshold)
+    ,withMinimum(withMinimum)
     ,filterDstMin(minimum, kernelSize)
     ,filterDstSGDst(sobelGaussDst, kernelSize)
     ,filterDstSGPhi(sobelGaussPhi, kernelSize)
@@ -228,7 +229,11 @@ namespace sonar_wall_hough
       return peaks;
     
     //first perform a minimum filtering
-    base::samples::SonarBeam minFilteredBeam = filterPhiMin.filter(filterDstMin.filter(sonarBeam));
+    base::samples::SonarBeam minFilteredBeam;
+    if(withMinimum)
+      minFilteredBeam = filterPhiMin.filter(filterDstMin.filter(sonarBeam));
+    else
+      minFilteredBeam = sonarBeam;
     
     //then perform a sobel + gaussian filtering
     //Phi Directed sobel
@@ -254,7 +259,6 @@ namespace sonar_wall_hough
   }
 
 }//ending namespace
-
 
 
 

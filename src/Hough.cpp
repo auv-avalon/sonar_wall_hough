@@ -9,7 +9,7 @@ Hough::Hough(const Config& config)
   , startAngle(-1.0)
   , scanDirection(0)
   , lastAngle(-1.0)
-  , filter(5, config.filterThreshold)
+  , filter(5, config.filterThreshold, config.withMinimumFilter)
   , lastSpatialResolution(0.0)
   , lastOrientation(base::Angle::fromRad(0.0))
   , firstOrientation(base::Angle::fromRad(0.0))
@@ -88,6 +88,7 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
 {  
   //std::cout << "Last analysis angle = " << lastAnalysisAngle << std::endl;
   //std::cout << "registering beam with angle = " << beam.bearing << ".\n";
+  //std::cout << "registering beam with " << beam.beam.size() << " buckets" << std::endl;
   
   //correct angle for this beam
   double actAngle = beam.bearing.getRad();
@@ -96,6 +97,7 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
   //std::cout << "angle is " << beam.bearing << ", should be " << bla << std::endl;
   
   std::vector<SonarPeak> peaks = filter.filter(beam, (int)(config.minDistance/beam.getSpatialResolution()));
+  //std::cout << "registering beam with " << peaks.size() << " peaks" << std::endl;
   lastSpatialResolution = beam.getSpatialResolution();
   //append peaks to allPeaks
   allPeaks.insert(allPeaks.end(), peaks.begin(), peaks.end());
@@ -108,16 +110,21 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
   if(actAngle < 0.0)
     actAngle += 2*M_PI;
   
+  //std::cout << "last = " << lastAngle << ", act = " << actAngle << ", start = " << startAngle << std::endl;
   if(lastAngle <= -1.0)
   {
     startAngle = actAngle;
   }
   else
   {
+    int pass = 0;
     //what is the actual Direction?
     int actDir = (int)copysign(1.0, actAngle-lastAngle);
     if(fabs(actAngle-lastAngle) > M_PI)
+    {
       actDir *= -1;
+      pass = 1;
+    }
     
     if(scanDirection == 0)
       scanDirection = actDir;
@@ -130,9 +137,10 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
 	startAngle = actAngle;
 	analyzeHoughspace();
       }
-      else if(startAngle == actAngle)
+      else if(fabs(actAngle-startAngle) <= fabs(((actAngle-lastAngle)-2*M_PI*pass)/2))
       {
 	//we have a full 360° scan
+	startAngle = actAngle;
 	analyzeHoughspace();
       }
     }
@@ -237,9 +245,11 @@ void Hough::postprocessLines()
   actualPosition.first = xPos;
   actualPosition.second = yPos;
   
+  /*
   //x- and y-axis for debugging
   actualLines.push_back(Line(actualLines[2].alpha,-xPos*xScale,0));
   actualLines.push_back(Line(actualLines[0].alpha,-yPos*yScale,0));
+  */
 }
 
 double Hough::calculateError()

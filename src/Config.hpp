@@ -10,6 +10,7 @@ namespace sonar_wall_hough
   {
     double sensorAngularResolution;
     uint8_t filterThreshold;
+    bool withMinimumFilter;
     int anglesPerBin;
     int maxDistance;
     double minDistance;
@@ -22,6 +23,7 @@ namespace sonar_wall_hough
     Config()
 	: sensorAngularResolution(0.0)
 	, filterThreshold(0)
+	, withMinimumFilter(false)
 	, anglesPerBin(0)
 	, maxDistance(0)
 	, minDistance(0.0)
