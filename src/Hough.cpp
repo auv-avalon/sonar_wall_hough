@@ -14,8 +14,9 @@ Hough::Hough(const Config& config)
   , lastOrientation(base::Angle::fromRad(0.0))
   , firstOrientation(base::Angle::fromRad(0.0))
   , actualPosition(std::pair<double,double>(0.0,0.0))
+  , accMax(config.gain)
 {
-  accMax = 10;
+  //accMax = 5;
   double accAngle10 = M_PI * 3/8; //67.5°
   int accD10 = 12;
   accAsq = accAngle10*accAngle10/(-2* log(0.1));

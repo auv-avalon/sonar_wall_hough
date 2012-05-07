@@ -19,6 +19,7 @@ namespace sonar_wall_hough
     double angleDelta;
     double basinHeight;
     double basinWidth;
+    int gain;
 
     Config()
 	: sensorAngularResolution(0.0)
@@ -32,6 +33,7 @@ namespace sonar_wall_hough
 	, angleDelta(0)
 	, basinHeight(0.0)
 	, basinWidth(0.0)
+	, gain(0)
     {
     }   
 

@@ -195,9 +195,15 @@ std::vector< Line > Line::selectLines(std::vector< Line > lines, std::pair<int,i
 	int neededDistance = 0;
 	double diff = fmod(fabs(par[0].alpha - orientation), M_PI);
 	if(diff < M_PI/4)
+	{
 	  neededDistance = basinSize.first / spatialResolution;
+	  //std::cout << "More in line with orientation, distance = height: "<<basinSize.first<<" (="<<neededDistance<<")"<<std::endl;
+	}
 	else
+	{
 	  neededDistance = basinSize.second / spatialResolution;
+	  //std::cout << "More orthogonal to orientation, distance = width: "<<basinSize.second<<" (="<<neededDistance<<")"<<std::endl;
+	}
 	
 	//guess other line (must be on opposite side of auv)
 	int dNew = 0;
