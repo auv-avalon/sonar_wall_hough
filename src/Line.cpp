@@ -221,38 +221,6 @@ std::vector< Line > Line::selectLines(std::vector< Line > lines, std::pair<int,i
       }
       lines.insert(lines.end(), par.begin(), par.end());
     }
-    
-    /*
-    //guess the missing lines to always have 2x2 lines for the output
-    if(parallels[bestIdxA].size()+parallels[bestIdxB].size() == 3)
-    {
-      int fullIdx, halfIdx;
-      if(parallels[bestIdxA].size() == 2 && parallels[bestIdxB].size() == 1)
-      {
-	fullIdx = bestIdxA;
-	halfIdx = bestIdxB;
-      }
-      else if(parallels[bestIdxB].size() == 2 && parallels[bestIdxA].size() == 1)
-      {
-	fullIdx = bestIdxB;
-	halfIdx = bestIdxA;
-      }
-      int fullDiff = abs(parallels[fullIdx].at(0).d - parallels[fullIdx].at(1).d);
-      int halfDiff;
-      if(abs(fullDiff - basinSize.first) < abs(fullDiff - basinSize.second))
-	halfDiff = basinSize.second;
-      else
-	halfDiff = basinSize.first;
-      
-      int newDiff;
-      if(parallels[halfIdx].at(0).d < 0)
-	newDiff = parallels[halfIdx].at(0).d + halfDiff;
-      else
-	newDiff = parallels[halfIdx].at(0).d - halfDiff;
-      
-      parallels[halfIdx].push_back(Line(parallels[halfIdx].at(0).alpha, newDiff, 0));
-    }
-    */
   }
   
   //print lines

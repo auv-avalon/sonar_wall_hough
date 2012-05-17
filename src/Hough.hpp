@@ -49,6 +49,7 @@ private:
   std::pair<double,double> actualPosition;
   double startAngle;
   int scanDirection;
+  bool halfDone;
   double lastAngle;
   int localRangeDstIdx;
   int localRangeAngleIdx;

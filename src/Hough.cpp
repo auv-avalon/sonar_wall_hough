@@ -7,6 +7,7 @@ Hough::Hough(const Config& config)
   : config(config)
   , houghspace(config)
   , startAngle(-1.0)
+  , halfDone(false)
   , scanDirection(0)
   , lastAngle(-1.0)
   , filter(5, config.filterThreshold, config.withMinimumFilter)
@@ -16,6 +17,7 @@ Hough::Hough(const Config& config)
   , actualPosition(std::pair<double,double>(0.0,0.0))
   , accMax(config.gain)
 {
+  std::cout << "ctor: " << allPeaks.size() << std::endl;
   //accMax = 5;
   double accAngle10 = M_PI * 3/8; //67.5°
   int accD10 = 12;
@@ -29,6 +31,7 @@ Hough::Hough(const Config& config)
   localRangeAngleIdx = houghspace.angle2Idx(M_PI/8);
   
   angleTolerance = M_PI / 32;
+  std::cout << "ctor done: " << allPeaks.size() << std::endl;
 }
 
 Hough::~Hough()
@@ -86,7 +89,10 @@ void Hough::accumulate(std::vector<SonarPeak> peaks)
 }
 
 void Hough::registerBeam(base::samples::SonarBeam beam)
-{  
+{
+  std::cout << "registering beam" << std::endl;
+  int a = 0;
+  std::cout << "register: " << allPeaks.size() << std::endl;
   //std::cout << "Last analysis angle = " << lastAnalysisAngle << std::endl;
   //std::cout << "registering beam with angle = " << beam.bearing << ".\n";
   //std::cout << "registering beam with " << beam.beam.size() << " buckets" << std::endl;
@@ -131,22 +137,42 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
       scanDirection = actDir;
     else
     {
-      //has direction cchanged?
+      //has direction changed?
       if(actDir != scanDirection)
       {
 	scanDirection = actDir;
 	startAngle = actAngle;
 	analyzeHoughspace();
       }
-      else if(fabs(actAngle-startAngle) <= fabs(((actAngle-lastAngle)-2*M_PI*pass)/2))
+      else
       {
-	//we have a full 360° scan
-	startAngle = actAngle;
-	analyzeHoughspace();
+	//adjust actAngle
+	double actAdjusted = actAngle;
+	if(actDir == +1 && actAdjusted < startAngle)
+	  actAdjusted += 2*M_PI;
+	else if(actDir == -1 && actAdjusted > startAngle)
+	  actAdjusted -= 2*M_PI;
+	
+	if(halfDone)
+	{
+	  if((actAdjusted - startAngle) * actDir < M_PI)
+	  {
+	    //we have a full 360° scan
+	    startAngle = actAngle;
+	    halfDone = false;
+	    analyzeHoughspace();
+	  }
+	}
+	else
+	{
+	  if((actAdjusted - startAngle) * actDir > M_PI)
+	    halfDone = true;
+	}
       }
     }
   }  
   lastAngle = actAngle;
+  std::cout << "register done: " << allPeaks.size() << std::endl;
 }
 
 void Hough::analyzeHoughspace()
@@ -184,6 +210,7 @@ Houghspace* Hough::getHoughspace()
 
 std::vector< SonarPeak >* Hough::getAllPeaks()
 {
+  std::cout << "getAllPeaks" << allPeaks.size() << std::endl;
   return &allPeaks;
 }
 
