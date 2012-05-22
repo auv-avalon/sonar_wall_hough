@@ -17,7 +17,6 @@ Hough::Hough(const Config& config)
   , actualPosition(std::pair<double,double>(0.0,0.0))
   , accMax(config.gain)
 {
-  std::cout << "ctor: " << allPeaks.size() << std::endl;
   //accMax = 5;
   double accAngle10 = M_PI * 3/8; //67.5°
   int accD10 = 12;
@@ -31,7 +30,6 @@ Hough::Hough(const Config& config)
   localRangeAngleIdx = houghspace.angle2Idx(M_PI/8);
   
   angleTolerance = M_PI / 32;
-  std::cout << "ctor done: " << allPeaks.size() << std::endl;
 }
 
 Hough::~Hough()
@@ -90,9 +88,6 @@ void Hough::accumulate(std::vector<SonarPeak> peaks)
 
 void Hough::registerBeam(base::samples::SonarBeam beam)
 {
-  std::cout << "registering beam" << std::endl;
-  int a = 0;
-  std::cout << "register: " << allPeaks.size() << std::endl;
   //std::cout << "Last analysis angle = " << lastAnalysisAngle << std::endl;
   //std::cout << "registering beam with angle = " << beam.bearing << ".\n";
   //std::cout << "registering beam with " << beam.beam.size() << " buckets" << std::endl;
@@ -172,7 +167,6 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
     }
   }  
   lastAngle = actAngle;
-  std::cout << "register done: " << allPeaks.size() << std::endl;
 }
 
 void Hough::analyzeHoughspace()
@@ -210,7 +204,6 @@ Houghspace* Hough::getHoughspace()
 
 std::vector< SonarPeak >* Hough::getAllPeaks()
 {
-  std::cout << "getAllPeaks" << allPeaks.size() << std::endl;
   return &allPeaks;
 }
 
@@ -257,9 +250,17 @@ bool Hough::isLocalMaximum(int angleIdx, int dstIdx)
 void Hough::postprocessLines()
 {
   std::pair<int,int> basinSize(config.basinHeight, config.basinWidth);
-  actualLines = Line::selectLines(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*4/180*M_PI), firstOrientation.getRad(), true, true);
+  
+  //actualLines = Line::selectLines(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*4/180*M_PI), firstOrientation.getRad(), true, true);
+  actualLines = Line::selectLines2(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*4/180*M_PI), -firstOrientation.getRad(), houghspace); //orientation must be negative (heading of auv = - heading of basin in respect of auv)
   if(actualLines.size() < 4)
     return;
+  
+  std::cout << "the lines are:" <<std::endl << "horz:" <<std::endl;
+  std::cout << "Line: alpha = " << actualLines[0].alpha << "[" << actualLines[0].alpha*180.0/M_PI << "°], d = " << actualLines[0].d << ", votes: " << actualLines[0].votes << std::endl;
+  std::cout << "Line: alpha = " << actualLines[1].alpha << "[" << actualLines[1].alpha*180.0/M_PI << "°], d = " << actualLines[1].d << ", votes: " << actualLines[1].votes << std::endl;
+  std::cout << "vert:\nLine: alpha = " << actualLines[2].alpha << "[" << actualLines[2].alpha*180.0/M_PI << "°], d = " << actualLines[2].d << ", votes: " << actualLines[2].votes << std::endl;
+  std::cout << "Line: alpha = " << actualLines[3].alpha << "[" << actualLines[3].alpha*180.0/M_PI << "°], d = " << actualLines[3].d << ", votes: " << actualLines[3].votes << std::endl;
   
   calculateError();  
   
@@ -289,12 +290,14 @@ double Hough::calculateError()
   for(int i = 0; i < nrOfPeaks; i++)
   {
     std::pair<int,double> lineDst = allPeaks[i].smallestDstFromLine(actualLines);
+    std::cout << ", " << lineDst.second;
     meanSquareError += (lineDst.second*lineDst.second)/nrOfPeaks;
     if(lineDst.second <= 20) //TODO: property if needed
     {
       lineSupporters[lineDst.first]++;
     }
   }
+  std::cout << std::endl;
   
   //distance of parallel lines
   double xDiff = fabs(actualLines[2].d-actualLines[3].d) / config.basinWidth * lastSpatialResolution;
@@ -311,6 +314,7 @@ void Hough::setOrientation(double orientation)
 {
   
   this->lastOrientation = base::Angle::fromRad(orientation + (config.angleDelta*M_PI/180.0));
+  //std::cout << "orientation set to " << lastOrientation << std::endl;
 }
 
 base::Angle Hough::getOrientation()

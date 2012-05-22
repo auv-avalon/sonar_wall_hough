@@ -2,10 +2,10 @@
 #define _SONAR_WALL_HOUGH_HOUGHSPACE_HPP_
 
 #include "Config.hpp"
-#include "SonarPeak.hpp"
+//#include "SonarPeak.hpp"
 #include <iostream>
 #include <base/samples/sonar_beam.h>
-#include "Line.hpp"
+//#include "Line.hpp"
 
 namespace sonar_wall_hough
 {
@@ -14,7 +14,7 @@ namespace sonar_wall_hough
   public:
     Houghspace(const Config &config);
     ~Houghspace();
-    boost::uint8_t* at(Line line);
+    //boost::uint8_t* at(Line line);
     boost::uint8_t* at(double angle, int dst);
     boost::uint8_t* at(int angleIdx, int dstIdx);
     boost::uint8_t* uncheckedAt(int angleIdx, int dstIdx);

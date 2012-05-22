@@ -18,10 +18,12 @@ Houghspace::~Houghspace()
   delete[] (space - (numberOfPosDistances * numberOfAngles));
 }
 
+/*
 boost::uint8_t* Houghspace::at(Line line)
 {
   return at(line.alpha, line.d);
 }
+*/
 
 boost::uint8_t* Houghspace::at(double angle, int dst)
 {
