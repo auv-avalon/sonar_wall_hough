@@ -378,8 +378,13 @@ std::vector<LinePair> Line::findCorrecpondence(std::vector< Line > lines, int di
       if(i == j)
 	continue;
       
+      //lines must lie on opposite sides of origin (i.e. different signs in dst)
+      if(lines[i].d<0 == lines[j].d<0)
+	continue;
+      
       int dstDiff = abs(lines[i].d - lines[j].d) - distance;
       int tscore = (lines[i].votes + lines[j].votes) * exp(-0.5*dstDiff*dstDiff/sigmasq)-0.1;//make score
+      
       if(tscore > score)
       {
 	bestIdx = j;

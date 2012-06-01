@@ -94,7 +94,7 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
   
   //correct angle for this beam
   double actAngle = beam.bearing.getRad();
-  beam.bearing = beam.bearing + (lastOrientation - firstOrientation);
+  beam.bearing = beam.bearing - (lastOrientation - firstOrientation);
   //base::Angle bla = base::Angle::fromRad(angleCorrect);
   //std::cout << "angle is " << beam.bearing << ", should be " << bla << std::endl;
   
@@ -290,14 +290,14 @@ double Hough::calculateError()
   for(int i = 0; i < nrOfPeaks; i++)
   {
     std::pair<int,double> lineDst = allPeaks[i].smallestDstFromLine(actualLines);
-    std::cout << ", " << lineDst.second;
+    //std::cout << ", " << lineDst.second;
     meanSquareError += (lineDst.second*lineDst.second)/nrOfPeaks;
     if(lineDst.second <= 20) //TODO: property if needed
     {
       lineSupporters[lineDst.first]++;
     }
   }
-  std::cout << std::endl;
+  //std::cout << std::endl;
   
   //distance of parallel lines
   double xDiff = fabs(actualLines[2].d-actualLines[3].d) / config.basinWidth * lastSpatialResolution;
