@@ -25,7 +25,7 @@ namespace sonar_wall_hough
     std::pair<base::Vector3d, base::Vector3d> toCartesian(const Line& limitA, const Line& limitB);
     
     static std::vector<Line> selectLines(std::vector<Line> lines, std::pair<int,int> basinSize, double spatialResolution, double angleTolerance, double orientation, bool alignLines, bool guessMissing);
-    static std::vector<Line> selectLines2(std::vector<Line> lines, std::pair<int,int> basinSize, double spatialResolution, double angleTolerance, double basinOrientation, Houghspace& houghspace);
+    static std::vector<Line> selectLines2(std::vector<Line> lines, std::pair<int,int> basinSize, double spatialResolution, double angleTolerance, double basinOrientation, Houghspace& houghspace, double*& orientationDrift);
   private:    
     static std::vector<Line> selectByDistance(std::vector<Line> lines, std::pair<int,int> basinSize, double spatialResolution);
     static std::vector<LinePair> findCorrecpondence(std::vector<Line> lines, int distance, Houghspace& houghspace);

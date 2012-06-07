@@ -16,6 +16,8 @@ Hough::Hough(const Config& config)
   , firstOrientation(base::Angle::fromRad(0.0))
   , actualPosition(std::pair<double,double>(0.0,0.0))
   , accMax(config.gain)
+  , orientationDrift(0.0)
+  , orientationDriftDetected(false)
 {
   //accMax = 5;
   double accAngle10 = M_PI * 3/8; //67.5°
@@ -30,6 +32,7 @@ Hough::Hough(const Config& config)
   localRangeAngleIdx = houghspace.angle2Idx(M_PI/8);
   
   angleTolerance = M_PI / 32;
+  houghspace.clear();
 }
 
 Hough::~Hough()
@@ -252,9 +255,17 @@ void Hough::postprocessLines()
   std::pair<int,int> basinSize(config.basinHeight, config.basinWidth);
   
   //actualLines = Line::selectLines(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*4/180*M_PI), firstOrientation.getRad(), true, true);
-  actualLines = Line::selectLines2(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*4/180*M_PI), -firstOrientation.getRad(), houghspace); //orientation must be negative (heading of auv = - heading of basin in respect of auv)
+  double* actualOrientationDrift = NULL;
+  actualLines = Line::selectLines2(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*4/180*M_PI), -firstOrientation.getRad(), houghspace, actualOrientationDrift); //orientation must be negative (heading of auv = - heading of basin in respect of auv)
   if(actualLines.size() < 4)
     return;
+  
+  if(actualOrientationDrift != NULL)
+  {
+    orientationDriftDetected = true;
+    orientationDrift = *actualOrientationDrift;
+    delete actualOrientationDrift;
+  }
   
   std::cout << "the lines are:" <<std::endl << "horz:" <<std::endl;
   std::cout << "Line: alpha = " << actualLines[0].alpha << "[" << actualLines[0].alpha*180.0/M_PI << "°], d = " << actualLines[0].d << ", votes: " << actualLines[0].votes << std::endl;
@@ -325,6 +336,16 @@ base::Angle Hough::getOrientation()
 std::pair< double, double > Hough::getActualPosition()
 {
   return actualPosition;
+}
+
+double Hough::getOrientationDrift()
+{
+  if(orientationDriftDetected)
+  {
+    return orientationDrift;
+  }
+  else
+    return 0.0;
 }
 
 

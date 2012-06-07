@@ -32,6 +32,7 @@ public:
   void clear();
   void setOrientation(double orientation);
   double calculateError();
+  double getOrientationDrift();
   
 private:
   inline int accumulateValue(double deltaAngle, int deltaDst, SonarPeak& peak);
@@ -57,6 +58,8 @@ private:
   double lastSpatialResolution;
   base::Angle lastOrientation;
   base::Angle firstOrientation;
+  double orientationDrift;
+  bool orientationDriftDetected;
   
   //the farest delta angle being accumulated (1)
   int accAngleIdx;

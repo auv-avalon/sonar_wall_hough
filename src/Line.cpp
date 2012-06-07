@@ -294,8 +294,8 @@ std::vector< Line > Line::selectByDistance(std::vector< Line > lines, std::pair<
   return lines;
 }
 
-std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int, int > basinSize, double spatialResolution, double angleTolerance, double basinOrientation, Houghspace& houghspace)
-{
+std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int, int > basinSize, double spatialResolution, double angleTolerance, double basinOrientation, Houghspace& houghspace, double*& orientationDrift)
+{  
   std::cout << "selecting lines with basin orientation = " << basinOrientation << " and tolerance " << angleTolerance << std::endl;
   std::vector<Line> result;
   
@@ -304,22 +304,25 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
   for(std::vector<Line>::iterator it = lines.begin(); it != lines.end(); it++)
   {
     //angle difference to vert walls ( = orientation)
-    base::Angle diff = base::Angle::fromRad(basinOrientation-it->alpha);
+    base::Angle diff = base::Angle::fromRad(basinOrientation-it->alpha); //line angles are always between 0 and M_PI, basinOrientation is between -M_PI and M_PI
     if(fabs(0.0 - diff.getRad()) < angleTolerance || fabs(M_PI - diff.getRad()) < angleTolerance || fabs(-M_PI - diff.getRad()) < angleTolerance)
     {
       //line is vertical, align
       if(!(fabs(0.0 - diff.getRad()) < angleTolerance))
+      {
 	it->d *= -1;
-      it->alpha = basinOrientation;
-      
+	it->alpha -= M_PI;
+      }
       linesVert.push_back(*it);
     }
     else if(fabs(-M_PI/2 - diff.getRad()) < angleTolerance || fabs(M_PI/2 - diff.getRad()) < angleTolerance)
     {
       //line is horizontal, align
       if(fabs(M_PI/2 - diff.getRad()) < angleTolerance)
+      {
 	it->d *= -1;
-      it->alpha = basinOrientation + M_PI/2;
+	it->alpha -= M_PI;
+      }
       
       linesHorz.push_back(*it);
     }
@@ -355,6 +358,24 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
   }
   result.push_back(corrVert[bestIdx].a);
   result.push_back(corrVert[bestIdx].b);
+  
+  //calculate orientationDrift
+  double actualOrientation = 0.0;
+  int votes = 0;
+  actualOrientation += (result[0].alpha - M_PI/2) * result[0].votes;
+  votes += result[0].votes;
+  actualOrientation += (result[1].alpha - M_PI/2) * result[1].votes;
+  votes += result[1].votes;
+  actualOrientation += (result[2].alpha) * result[2].votes;
+  votes += result[2].votes;
+  actualOrientation += (result[3].alpha) * result[3].votes;
+  votes += result[3].votes;
+  actualOrientation /= votes;
+  orientationDrift = new double(actualOrientation - basinOrientation);
+  
+  //align lines
+  result[0].alpha = result[1].alpha = actualOrientation + M_PI/2;
+  result[2].alpha = result[3].alpha = actualOrientation;
     
   return result;
 }
