@@ -391,6 +391,13 @@ std::vector<LinePair> Line::findCorrecpondence(std::vector< Line > lines, int di
   for(int i = 0; i < lines.size(); i++)
   {
     std::cout << "looking for best correspondence for line " << lines[i].alpha << "rad/"<<lines[i].d << std::endl;
+    
+    if(abs(lines[i].d) > distance)
+    {
+      std::cout << "Line is too far away. skipping." << std::endl;
+      continue;
+    }
+    
     int score = 0;
     int bestIdx = -1;
     //get best corresponding line
