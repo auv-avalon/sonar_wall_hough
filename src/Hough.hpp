@@ -34,6 +34,12 @@ public:
   double calculateError();
   double getOrientationDrift();
   
+  //quality outputs
+  double getBasinWidthDiff();
+  double getBasinHeightDiff();
+  double getMeanSqErr();
+  double getSupportRatio();
+  
 private:
   inline int accumulateValue(double deltaAngle, int deltaDst, SonarPeak& peak);
   bool isLocalMaximum(int angleIdx, int dstIdx);
@@ -64,6 +70,12 @@ private:
   //the farest delta angle being accumulated (1)
   int accAngleIdx;
   int accDIdx;
+  
+  //quality outputs
+  double basinWidthDiff;
+  double basinHeightDiff;
+  double meanSqErr;
+  double supportRatio;
 };
 
 }

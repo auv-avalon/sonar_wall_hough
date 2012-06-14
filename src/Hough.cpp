@@ -296,13 +296,13 @@ double Hough::calculateError()
 {
   //mean square error of peaks & line supporters
   std::vector<int> lineSupporters(actualLines.size(), 0);
-  double meanSquareError = 0.0;
+  meanSqErr = 0.0;
   int nrOfPeaks = allPeaks.size();
   for(int i = 0; i < nrOfPeaks; i++)
   {
     std::pair<int,double> lineDst = allPeaks[i].smallestDstFromLine(actualLines);
     //std::cout << ", " << lineDst.second;
-    meanSquareError += (lineDst.second*lineDst.second)/nrOfPeaks;
+    meanSqErr += (lineDst.second*lineDst.second)/nrOfPeaks;
     if(lineDst.second <= 20) //TODO: property if needed
     {
       lineSupporters[lineDst.first]++;
@@ -311,14 +311,16 @@ double Hough::calculateError()
   //std::cout << std::endl;
   
   //distance of parallel lines
-  double xDiff = fabs(actualLines[2].d-actualLines[3].d) / config.basinWidth * lastSpatialResolution;
-  double yDiff = fabs(actualLines[0].d-actualLines[1].d) / config.basinHeight * lastSpatialResolution;
+  basinWidthDiff = fabs(actualLines[2].d-actualLines[3].d) * lastSpatialResolution - config.basinWidth;
+  basinHeightDiff = fabs(actualLines[0].d-actualLines[1].d) * lastSpatialResolution - config.basinHeight;
   
+  supportRatio = (double)(lineSupporters[0]+lineSupporters[1]+lineSupporters[2]+lineSupporters[3])/nrOfPeaks;
   //cout the values
   std::cout << "QUALITY OF MEASUREMENT:" << std::endl;
-  std::cout << "difference of parallel walls is " << xDiff << " at x and " << yDiff << " at y." << std::endl;
-  std::cout << "Mean square error of peaks is " << meanSquareError << std::endl;
+  std::cout << "difference of parallel walls is " << basinWidthDiff << "m at x and " << basinHeightDiff << "m at y." << std::endl;
+  std::cout << "Mean square error of peaks is " << meanSqErr << std::endl;
   std::cout << "the wall's supporters: " << lineSupporters[0] << ", " << lineSupporters[1] << ", " << lineSupporters[2] << ", " <<lineSupporters[3] << std::endl;
+  
 }
 
 void Hough::setOrientation(double orientation)
@@ -348,6 +350,22 @@ double Hough::getOrientationDrift()
     return 0.0;
 }
 
+double Hough::getBasinHeightDiff()
+{
+  return basinHeightDiff;
+}
+double Hough::getBasinWidthDiff()
+{
+  return basinWidthDiff;
+}
+double Hough::getMeanSqErr()
+{
+  return meanSqErr;
+}
+double Hough::getSupportRatio()
+{
+  return supportRatio;
+}
 
 
 }//end namespace
