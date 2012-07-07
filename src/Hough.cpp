@@ -256,7 +256,7 @@ void Hough::postprocessLines()
   
   //actualLines = Line::selectLines(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*4/180*M_PI), firstOrientation.getRad(), true, true);
   double* actualOrientationDrift = NULL;
-  actualLines = Line::selectLines2(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*4/180*M_PI), -firstOrientation.getRad(), houghspace, actualOrientationDrift); //orientation must be negative (heading of auv = - heading of basin in respect of auv)
+  actualLines = Line::selectLines2(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*8/180*M_PI), -firstOrientation.getRad(), houghspace, actualOrientationDrift); //orientation must be negative (heading of auv = - heading of basin in respect of auv)
   if(actualLines.size() < 4)
     return;
   

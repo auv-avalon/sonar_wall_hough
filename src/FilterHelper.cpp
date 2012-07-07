@@ -79,7 +79,7 @@ namespace sonar_wall_hough
     int temp;
     std::vector<uint8_t>::iterator in = sonarBeam.beam.begin();
     std::vector<uint8_t>::iterator out = filteredBeam.beam.begin();
-    for(; in < sonarBeam.beam.end(); in++, out++)
+    for(; in < sonarBeam.beam.end()-kernelSize/2; in++, out++)
     {
       if(type == minimum)
       {
@@ -120,6 +120,7 @@ namespace sonar_wall_hough
     }
     
     //fill rest of out if in minimum type
+    /*
     if(type == minimum)
     {
       int i = 0;
@@ -129,6 +130,7 @@ namespace sonar_wall_hough
 	out++;
       }
     }
+    */
     return filteredBeam;
   }
 

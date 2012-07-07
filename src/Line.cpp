@@ -433,8 +433,8 @@ std::vector<LinePair> Line::findCorrecpondence(std::vector< Line > lines, int di
 	score = pscore;
       }
     }
-    else if(bestIdx == -1) //if no correspondence and invalid place in houghspace, ignore this line
-      continue;
+    else if(bestIdx == -1) //if invalid in hough space, set to same as lines[i]. This happens when the maxDistance is smaller than the lines dst should be
+      score = lines[i].votes;
     
     //push best pair
     if(bestIdx != -1)
