@@ -303,6 +303,34 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
   std::vector<Line> linesVert, linesHorz;
   for(std::vector<Line>::iterator it = lines.begin(); it != lines.end(); it++)
   {
+    //bring line to same angle region as basin
+    if((it->alpha - basinOrientation) > M_PI/2) // line angle too big
+    {
+      while((it->alpha - basinOrientation) > M_PI/2)
+      {
+	it->alpha -= M_PI;
+	it->d *= -1;
+      }
+    }
+    if((basinOrientation - it->alpha) > M_PI/2) // line angle too small
+    {
+      while((basinOrientation - it->alpha) > M_PI/2)
+      {
+	it->alpha += M_PI;
+	it->d *= -1;
+      }
+    }
+    
+    if(fabs(0.0 - (basinOrientation - it->alpha) ) < angleTolerance)
+    {
+      if(it->d > 0) // dont detect back wall (in direction of open water)
+	linesVert.push_back(*it);
+    }
+    else if(fabs(-M_PI/2 - (basinOrientation - it->alpha) ) < angleTolerance || fabs(M_PI/2 - (basinOrientation - it->alpha) ) < angleTolerance)
+    {
+      linesHorz.push_back(*it);
+    }
+    /*
     //angle difference to vert walls ( = orientation)
     base::Angle diff = base::Angle::fromRad(basinOrientation-it->alpha); //line angles are always between 0 and M_PI, basinOrientation is between -M_PI and M_PI
     if(fabs(0.0 - diff.getRad()) < angleTolerance || fabs(M_PI - diff.getRad()) < angleTolerance || fabs(-M_PI - diff.getRad()) < angleTolerance)
@@ -326,6 +354,7 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
       
       linesHorz.push_back(*it);
     }
+    */
   }
   std::cout << "we have "<<linesVert.size()<<" vertical and " << linesHorz.size()<<" horizontal lines"<<std::endl;
     
