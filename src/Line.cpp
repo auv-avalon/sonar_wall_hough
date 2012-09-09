@@ -323,7 +323,8 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
     
     if(fabs(0.0 - (basinOrientation - it->alpha) ) < angleTolerance)
     {
-      if(it->d > 0) // dont detect back wall (in direction of open water)
+      //only for sauc-e to reject wrong lines where there surely is no wall
+      //if(it->d > 0) // dont detect back wall (in direction of open water)
 	linesVert.push_back(*it);
     }
     else if(fabs(-M_PI/2 - (basinOrientation - it->alpha) ) < angleTolerance || fabs(M_PI/2 - (basinOrientation - it->alpha) ) < angleTolerance)
@@ -391,9 +392,15 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
   //calculate orientationDrift
   double actualOrientation = 0.0;
   int votes = 0;
-  actualOrientation += (result[0].alpha - M_PI/2) * result[0].votes;
+  if(result[0].alpha >= 0.0)
+    actualOrientation += (result[0].alpha - M_PI/2) * result[0].votes;
+  else
+    actualOrientation += (result[0].alpha + M_PI/2) * result[0].votes;
   votes += result[0].votes;
-  actualOrientation += (result[1].alpha - M_PI/2) * result[1].votes;
+  if(result[1].alpha >= 0.0)
+    actualOrientation += (result[1].alpha - M_PI/2) * result[1].votes;
+  else
+    actualOrientation += (result[1].alpha + M_PI/2) * result[1].votes;
   votes += result[1].votes;
   actualOrientation += (result[2].alpha) * result[2].votes;
   votes += result[2].votes;
@@ -403,7 +410,14 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
   orientationDrift = new double(actualOrientation - basinOrientation);
   
   //align lines
-  result[0].alpha = result[1].alpha = actualOrientation + M_PI/2;
+  if(result[0].alpha >= 0.0)
+    result[0].alpha = actualOrientation + M_PI/2;
+  else
+    result[0].alpha = actualOrientation - M_PI/2;
+  if(result[1].alpha >= 0.0)
+    result[1].alpha = actualOrientation + M_PI/2;
+  else
+    result[1].alpha = actualOrientation - M_PI/2;
   result[2].alpha = result[3].alpha = actualOrientation;
     
   return result;
