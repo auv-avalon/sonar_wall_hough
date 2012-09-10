@@ -28,10 +28,14 @@ namespace sonar_wall_hough
     inline int angle2Idx(double angle)
     {
     //normalize angle to (-M_PI, M_PI]
-    angle = fmod(angle, 2*M_PI);
+    /*angle = fmod(angle, 2*M_PI);
     if(angle > M_PI)
       angle -= 2*M_PI;
-
+    */
+    while(angle >= M_PI)
+      angle -= 2*M_PI;
+    while(angle < -M_PI)
+      angle += 2*M_PI;
     return (int)(angle * numberOfAngles / M_PI + 0.5);
     }
     

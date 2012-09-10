@@ -39,7 +39,7 @@ boost::uint8_t* Houghspace::at(int angleIdx, int dstIdx)
     angleIdx += numberOfAngles;
     dstIdx *= -1;
   }
-  while(angleIdx > numberOfAngles)
+  while(angleIdx >= numberOfAngles)
   {
     angleIdx -= numberOfAngles;
     dstIdx *= -1;
