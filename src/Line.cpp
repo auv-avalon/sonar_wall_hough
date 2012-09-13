@@ -327,7 +327,14 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
       //if(it->d > 0) // dont detect back wall (in direction of open water)
 	linesVert.push_back(*it);
     }
-    else if(fabs(-M_PI/2 - (basinOrientation - it->alpha) ) < angleTolerance || fabs(M_PI/2 - (basinOrientation - it->alpha) ) < angleTolerance)
+    //horizontal lines must have angle about basinOrientation _+_ M_PI/2
+    else if(fabs(M_PI/2 - (basinOrientation - it->alpha) ) < angleTolerance)
+    {
+      it->alpha += M_PI;
+      it->d *= -1;
+      linesHorz.push_back(*it);
+    }
+    else if(fabs(-M_PI/2 - (basinOrientation - it->alpha) ) < angleTolerance)
     {
       linesHorz.push_back(*it);
     }
@@ -409,17 +416,25 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
   actualOrientation /= votes;
   orientationDrift = new double(actualOrientation - basinOrientation);
   
-  //align lines
-  if(result[0].alpha >= 0.0)
-    result[0].alpha = actualOrientation + M_PI/2;
-  else
-    result[0].alpha = actualOrientation - M_PI/2;
-  if(result[1].alpha >= 0.0)
-    result[1].alpha = actualOrientation + M_PI/2;
-  else
-    result[1].alpha = actualOrientation - M_PI/2;
-  result[2].alpha = result[3].alpha = actualOrientation;
-    
+  //rectify lines
+  //result[0,1] must be actualOrientation + M_PI/2
+  //result[2,3] must be actualOrientation
+  if(fabs(result[0].alpha - (actualOrientation+M_PI/2)) > M_PI/2)
+    result[0].d *= -1;
+  result[0].alpha = actualOrientation + M_PI/2;
+  
+  if(fabs(result[1].alpha - (actualOrientation+M_PI/2)) > M_PI/2)
+    result[1].d *= -1;
+  result[1].alpha = actualOrientation + M_PI/2;
+  
+  if(fabs(result[2].alpha - (actualOrientation)) > M_PI/2)
+    result[2].d *= -1;
+  result[2].alpha = actualOrientation;
+  
+  if(fabs(result[3].alpha - (actualOrientation)) > M_PI/2)
+    result[3].d *= -1;
+  result[3].alpha = actualOrientation;
+  
   return result;
 }
 
