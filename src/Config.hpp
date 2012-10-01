@@ -6,6 +6,9 @@
 
 namespace sonar_wall_hough
 {
+  /**
+   * This struct just holds various parameters for the hough localization
+   */
   struct Config
   {
     double sensorAngularResolution;

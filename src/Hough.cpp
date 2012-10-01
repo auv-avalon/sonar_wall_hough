@@ -31,7 +31,6 @@ Hough::Hough(const Config& config)
   localRangeDstIdx = houghspace.dst2Idx(10);
   localRangeAngleIdx = houghspace.angle2Idx(M_PI/8);
   
-  angleTolerance = M_PI / 32;
   houghspace.clear();
 }
 
@@ -292,7 +291,7 @@ void Hough::postprocessLines()
   */
 }
 
-double Hough::calculateError()
+void Hough::calculateError()
 {
   //mean square error of peaks & line supporters
   std::vector<int> lineSupporters(actualLines.size(), 0);
