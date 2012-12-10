@@ -31,6 +31,14 @@ Hough::Hough(const Config& config)
   localRangeDstIdx = houghspace.dst2Idx(10);
   localRangeAngleIdx = houghspace.angle2Idx(M_PI/8);
   
+  lastPosition=std::make_pair(0.0,0.0);  
+  
+  newDataCount=0;
+  minError=-1;
+  maxError=-1;
+  sumError=0;
+  count=0;
+  
   houghspace.clear();
 }
 
@@ -88,6 +96,54 @@ void Hough::accumulate(std::vector<SonarPeak> peaks)
   }
 }
 
+void Hough::accumulate(SonarPeak peak)
+{
+  int dstCenterIdx;
+  int angleCenterIdx = houghspace.angle2Idx(peak.alpha.rad); //all peaks have the same angle
+  double angle = peak.alpha.rad;
+  boost::uint8_t* ptr;
+  boost::uint16_t newValue;
+  double downvoteNear;
+  
+  for(int angleIdx = angleCenterIdx-accAngleIdx; angleIdx < angleCenterIdx+accAngleIdx; angleIdx++)
+  {
+
+      //calculate dst for this alpha and this peak
+      dstCenterIdx = houghspace.dst2Idx((peak.distance * cos(houghspace.idx2Angle(angleIdx) - angle)));
+      
+      //std::cout << "angleIdx = " << angleIdx << ", dstCenterIdx = " << dstCenterIdx << std::endl;
+      
+      //calculate downvote for small peak distance
+      //dstCenterIdx is between 0 and houghspace.getnumberOfPosDistances()
+      double dstRatio = (double)dstCenterIdx / houghspace.getnumberOfPosDistances();
+      //downvoteNear = dstRatio;
+      downvoteNear = 1-exp(-0.25*dstRatio*dstRatio/0.0016);
+      
+      //std::cout << "dstCenterIdx = " << dstCenterIdx << std::endl;
+      //std::cout << "downvoteNear = " << downvoteNear << std::endl;
+      
+      for(int dstIdx = dstCenterIdx-accDIdx; dstIdx < dstCenterIdx+accDIdx; dstIdx++)
+      {
+	//std::cout << "hough.cpp angleIdx " << angleIdx << ", dstIdx " << dstIdx << std::endl;
+	//get pointer to this houghspace bin
+	if((ptr = houghspace.at(angleIdx, dstIdx)) != NULL)
+	{
+	  int accVal = downvoteNear * accumulateValue(angle - houghspace.idx2Angle(angleIdx), houghspace.idx2Dst(dstCenterIdx) - houghspace.idx2Dst(dstIdx), peak);
+	  
+	  //std::cout << "at angleIdx " << angleIdx << ", dstIdx " << dstIdx << ": " << accVal<< std::endl;
+	  //check for overflow first
+	  newValue = accVal + (*ptr);
+	  //std::cout << "making " << (int)*ptr << "to " << (int)newValue << std::endl;
+	  if(newValue > std::numeric_limits<boost::uint8_t>::max())
+	    *ptr = std::numeric_limits<boost::uint8_t>::max();
+	  else
+	    *ptr = (boost::uint8_t)newValue;
+	}
+      }
+    
+  }
+}
+
 void Hough::registerBeam(base::samples::SonarBeam beam)
 {
   //std::cout << "Last analysis angle = " << lastAnalysisAngle << std::endl;
@@ -96,19 +152,41 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
   
   //correct angle for this beam
   double actAngle = beam.bearing.getRad();
-  beam.bearing = beam.bearing - (lastOrientation - firstOrientation);
+  beam.bearing = beam.bearing + (lastOrientation - firstOrientation);
   //base::Angle bla = base::Angle::fromRad(angleCorrect);
   //std::cout << "angle is " << beam.bearing << ", should be " << bla << std::endl;
   
   std::vector<SonarPeak> peaks = filter.filter(beam, (int)(config.minDistance/beam.getSpatialResolution()));
   //std::cout << "registering beam with " << peaks.size() << " peaks" << std::endl;
   lastSpatialResolution = beam.getSpatialResolution();
-  //append peaks to allPeaks
-  allPeaks.insert(allPeaks.end(), peaks.begin(), peaks.end());
+
   
   //accumulate peaks to houghspace (all peaks have the same bearing)
-  if(!peaks.empty())
-    accumulate(peaks);
+  if(!peaks.empty()){
+    //std::cout << "PEAKS: " << peaks.size() << std::endl;
+    
+    //for(std::vector<SonarPeak>::iterator it = peaks.begin(); it < peaks.end(); it++)
+    //	std::cout << "Distance " <<it->distance << " Str "<< int(it->strength)<< std::endl; 
+       
+    if(config.poseCorrection){
+          
+	if(config.correctToFirstPosition){
+	  correctPeaks(&peaks); 	  
+	  
+	}else{
+	  posPeaks.push_back(std::make_pair(actualPosition,peaks));
+	  newDataCount++;
+	  allPeaks.clear();
+	}  
+ 
+    }else{  
+      //append peaks to allPeaks
+      allPeaks.insert(allPeaks.end(), peaks.begin(), peaks.end());
+      
+      accumulate(peaks);
+    }
+    
+  }  
   
   //do we have a full 360° scan or a change of direction (ping-pong)?
   if(actAngle < 0.0)
@@ -157,6 +235,13 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
 	    //we have a full 360° scan
 	    startAngle = actAngle;
 	    halfDone = false;
+	    
+	    if(config.poseCorrection && !config.correctToFirstPosition){
+	      
+	      correctPeaks(posPeaks);	      
+	    }
+	    
+	    
 	    analyzeHoughspace();
 	  }
 	}
@@ -192,6 +277,7 @@ void Hough::analyzeHoughspace()
   std::cout << "found " << actualLines.size() << " Lines" << std::endl;
   postprocessLines();
   this->clear();
+  
 }
 
 int Hough::accumulateValue(double deltaAngle, int deltaDst, SonarPeak& peak)
@@ -219,9 +305,16 @@ void Hough::clear()
   //clear Houghspace
   houghspace.clear();
   //clear allPeaks
-  allPeaks.clear();
+  if(!config.poseCorrection || config.correctToFirstPosition) allPeaks.clear();
+  
+  std::cout << "NewDataCount:" << newDataCount << std::endl;
+  posPeaks.erase(posPeaks.begin(),posPeaks.end()-newDataCount);
+  //posPeaks.clear();
+  //posPeaks.erase(posPeaks.begin(),posPeaks.end());
   
   firstOrientation = lastOrientation;
+    
+  firstPosition = std::make_pair(lastPosition.first,lastPosition.second);
 }
 
 bool Hough::isLocalMaximum(int angleIdx, int dstIdx)
@@ -288,7 +381,7 @@ void Hough::postprocessLines()
   //x- and y-axis for debugging
   actualLines.push_back(Line(actualLines[2].alpha,-xPos*xScale,0));
   actualLines.push_back(Line(actualLines[0].alpha,-yPos*yScale,0));
-  */
+  */  
 }
 
 void Hough::calculateError()
@@ -319,7 +412,7 @@ void Hough::calculateError()
   std::cout << "difference of parallel walls is " << basinWidthDiff << "m at x and " << basinHeightDiff << "m at y." << std::endl;
   std::cout << "Mean square error of peaks is " << meanSqErr << std::endl;
   std::cout << "the wall's supporters: " << lineSupporters[0] << ", " << lineSupporters[1] << ", " << lineSupporters[2] << ", " <<lineSupporters[3] << std::endl;
-  
+ 
 }
 
 void Hough::setOrientation(double orientation)
@@ -366,5 +459,95 @@ double Hough::getSupportRatio()
   return supportRatio;
 }
 
+void Hough::setPosition(std::pair<double,double> pose){
+  lastPosition=pose;
+}
+
+
+void Hough::correctPeaks(std::vector<SonarPeak>* peaks){
+      
+      //Relative movement of avalon between begin of sonar-scan and now
+      double xDiv= cos(firstOrientation.getRad()) * (lastPosition.first - firstPosition.first) 
+		    -sin(firstOrientation.getRad()) * (lastPosition.second - firstPosition.second);
+      double yDiv= cos(firstOrientation.getRad()) * (lastPosition.second - firstPosition.second)
+		    +sin(firstOrientation.getRad()) * (lastPosition.first - firstPosition.first);
+      
+      for(std::vector<SonarPeak>::iterator it = peaks->begin(); it < peaks->end(); it++){
+	 
+	//Relative Position of the Peak to the actual Position of Avalon
+	 double x= cos(it->alpha.getRad()) * it->distance; 
+	 double y= sin(it->alpha.getRad()) * it->distance;
+	 
+	 //calculate new angle and distance of peak
+	 double angle = atan2(yDiv+y, xDiv+x);
+	 double distance = sqrt(pow((yDiv+y),2.0) + pow((xDiv+x),2.0));
+	 
+	 it->distance=distance;
+	 it->alpha.rad=angle;
+	 
+	 accumulate(*it);
+      }
+      
+      //append peaks to allPeaks
+      allPeaks.insert(allPeaks.end(), peaks->begin(), peaks->end());
+}
+
+void Hough::correctPeaks(std::vector <std::pair<std::pair<double,double>,std::vector<SonarPeak> > > peaks){
+    std::pair<double,double> lastPos=peaks.back().first;
+   
+    newDataCount=0;
+        
+    for(int i=0; i<peaks.size() ; i++){
+      std::pair<double,double> accPos=peaks[i].first;
+      std::vector<SonarPeak> accPeaks = peaks[i].second;
+      
+      //Relative Movement of avalon between the time of the sonar_peak and the finish of the sonar-scan
+      double xDiv= cos(firstOrientation.getRad()) * (accPos.first - lastPos.first) 
+		    -sin(firstOrientation.getRad()) * (accPos.second - lastPos.second);
+      double yDiv= cos(firstOrientation.getRad()) * (accPos.second - lastPos.second)
+		    +sin(firstOrientation.getRad()) * (accPos.first - lastPos.first);
+      
+      for(std::vector<SonarPeak>::iterator it = accPeaks.begin(); it< accPeaks.end() ; it++){
+	
+	//Calculate new angle and distance
+	double x=cos(it->alpha.getRad()) * it->distance;
+	double y=sin(it->alpha.getRad()) * it->distance;	
+	
+	it->distance=sqrt(pow(xDiv+x,2.0) + pow(yDiv+y,2.0));
+	it->alpha.rad=atan2(yDiv+y,xDiv+x);	
+		
+	accumulate(*it);	
+      }
+      
+      //apend corrected peaks to allpeaks
+      allPeaks.insert(allPeaks.end(),accPeaks.begin(),accPeaks.end());
+    }
+    
+}
+
+void Hough::calcPositionError(){
+    double error= sqrt(pow(lastPosition.first-actualPosition.first,2.0)+pow(lastPosition.second-actualPosition.second,2.0));
+    
+    if(error < minError || minError==-1){
+	minError=error;
+    }
+    if(error > maxError || maxError==-1){
+	maxError=error;
+    }  
+    sumError+=error;
+    count++;
+} 
+
+double Hough::getMinError(){
+  return minError;
+}
+
+double Hough::getMaxError(){
+  return maxError;
+}
+
+double Hough::getAvgError(){
+  return sumError/count;
+}  
 
 }//end namespace

@@ -23,6 +23,8 @@ namespace sonar_wall_hough
     double basinHeight;
     double basinWidth;
     int gain;
+    bool poseCorrection;
+    bool correctToFirstPosition;
 
     Config()
 	: sensorAngularResolution(0.0)

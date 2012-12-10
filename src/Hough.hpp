@@ -40,6 +40,13 @@ public:
   void accumulate(std::vector<SonarPeak> peaks);
   
   /**
+   * this method takes a single peak and accumulates the hough space appropriately.
+   * For faster accumulation please use void "accumulate(std::vector<SonarPeak> peaks)" 
+   * @param peak a single peak
+   */
+  void accumulate(SonarPeak peak);
+  
+  /**
    * this method receives a beam and invokes filtering and accumulation
    * it also detects when the hough space should be analyzed (i.e. after a full 360 degree scan)
    * @param beam the incoming sonar beam
@@ -117,6 +124,49 @@ public:
    * @return the ratio of peaks that have a distance of less than 20 to the closest wall
    */
   double getSupportRatio();
+  
+  /**
+   * Set the actual Position of Avalon
+   * @param pose actual 2D Position of Avalon (First: x-coordinate, Second y-coordinate)
+   */
+  void setPosition(std::pair<double,double> pose);
+  
+  /**
+   * corrects the angle and the distance of incoming sonar peaks by using the motion model
+   * @param peaks vector of incoming sonar peaks
+   */
+  void correctPeaks(std::vector<SonarPeak>* peaks);
+  
+  /**
+   * corrects the angle and the distance of sonar peaks, after the sonar scan is complete, by using the motion model
+   * @param peaks vector of sonar peaks and positions. the vector contains pairs of positions (given as a pair) and 
+   *			and a vector of sonar peaks (according to the position)
+   */
+  void correctPeaks(std::vector <std::pair<std::pair<double,double>,std::vector<SonarPeak> > >);
+  
+  /**
+   * calculates the difference, between the calculated position and the given external position. Also the minimal, maximum
+   * and the sum of the differences are saved. this method should be called, right after a sonar-scan is complete
+   */
+  void calcPositionError();
+  
+  /**
+   * gives the minimum difference between the calculated position and the given external position
+   * @return minimum difference
+   */
+  double getMinError();
+  
+  /**
+   * gives the maximum difference between the calculated position and the given external position
+   * @return maximum difference
+   */
+  double getMaxError();
+  
+  /**
+   * gives the average difference between the calculated postion and the given external position
+   * @return average difference
+   */
+  double getAvgError();
   
 private:
   /**
@@ -222,6 +272,31 @@ private:
   
   //the ratio of peaks that have a distance of less than 20 to the closest wall
   double supportRatio;
+  
+  //the position of avalon at the time of the start of the sonar scan
+  std::pair<double,double> firstPosition;
+  
+  //the last known position of avalon
+  std::pair<double,double> lastPosition;
+  
+  //Vector of avalon-positions and sonarpeaks. The vector contains pairs of positions
+  // (given as an pair) and a vector of sonar peaks (according to the position)
+   std::vector <std::pair<std::pair<double,double>,std::vector<SonarPeak> > > posPeaks;  
+  
+  //Counter for sonar samples. This counter is used to detect lost sonar_samples after houghspace-analysis 
+  int newDataCount;
+  
+  //Minimum Difference between calculated position and given external position
+  double minError;
+  
+  //Maximum Difference between calculated position and given external position
+  double maxError;
+  
+  //Sum of the differences between calculated position and given external position
+  double sumError;
+  
+  //Count of calculated differences, used to calculate the average error 
+  int count;
 };
 
 }
