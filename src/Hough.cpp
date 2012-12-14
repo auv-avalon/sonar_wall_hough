@@ -472,12 +472,15 @@ void Hough::correctPeaks(std::vector<SonarPeak>* peaks){
       double yDiv= cos(firstOrientation.getRad()) * (lastPosition.second - firstPosition.second)
 		    +sin(firstOrientation.getRad()) * (lastPosition.first - firstPosition.first);
       
+      double sonarXdiv = cos(lastOrientation.getRad() - firstOrientation.getRad()) * config.avalonSonarPose; 
+      double sonarYdiv = sin(lastOrientation.getRad() - firstOrientation.getRad()) * config.avalonSonarPose;
+		    
       for(std::vector<SonarPeak>::iterator it = peaks->begin(); it < peaks->end(); it++){
 	 
 	//Relative Position of the Peak to the actual Position of Avalon
-	 double x= cos(it->alpha.getRad()) * it->distance; 
-	 double y= sin(it->alpha.getRad()) * it->distance;
-	 
+	 double x= cos(it->alpha.getRad()) * it->distance + sonarXdiv; 
+	 double y= sin(it->alpha.getRad()) * it->distance + sonarYdiv;
+	 	 
 	 //calculate new angle and distance of peak
 	 double angle = atan2(yDiv+y, xDiv+x);
 	 double distance = sqrt(pow((yDiv+y),2.0) + pow((xDiv+x),2.0));

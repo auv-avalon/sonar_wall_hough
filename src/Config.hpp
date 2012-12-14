@@ -25,6 +25,7 @@ namespace sonar_wall_hough
     int gain;
     bool poseCorrection;
     bool correctToFirstPosition;
+    double avalonSonarPose;
 
     Config()
 	: sensorAngularResolution(0.0)
