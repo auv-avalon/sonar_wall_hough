@@ -30,6 +30,8 @@ namespace sonar_wall_hough
     //the number of votes from hough-transform
     int votes;
     
+    static bool debug;
+    
     /**
      * ctor for a line
      * @param alpha the angle of the normal
@@ -72,6 +74,9 @@ namespace sonar_wall_hough
      * @return a vector of the 4 chosen lines
      */
     static std::vector<Line> selectLines2(std::vector<Line> lines, std::pair<int,int> basinSize, double spatialResolution, double angleTolerance, double basinOrientation, Houghspace& houghspace, double*& orientationDrift);
+    
+    static void setDebug(bool d);
+  
   private:
     /**
      * selects fitting lines by distance, needed for selectLines
@@ -87,6 +92,7 @@ namespace sonar_wall_hough
      * @return the pair of lines
      */
     static std::vector<LinePair> findCorrecpondence(std::vector<Line> lines, int distance, Houghspace& houghspace);
+        
   };
   
   /**

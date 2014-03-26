@@ -12,6 +12,7 @@ namespace sonar_wall_hough
   struct Config
   {
     double sensorAngularResolution;
+    double sensorAngularTolerance;
     uint8_t filterThreshold;
     bool withMinimumFilter;
     int anglesPerBin;
@@ -26,9 +27,11 @@ namespace sonar_wall_hough
     bool poseCorrection;
     bool correctToFirstPosition;
     double avalonSonarPose;
+    bool debug;
 
     Config()
 	: sensorAngularResolution(0.0)
+	, sensorAngularTolerance(0.0)
 	, filterThreshold(0)
 	, withMinimumFilter(false)
 	, anglesPerBin(0)
@@ -40,6 +43,7 @@ namespace sonar_wall_hough
 	, basinHeight(0.0)
 	, basinWidth(0.0)
 	, gain(0)
+	, debug(false)
     {
     }   
 

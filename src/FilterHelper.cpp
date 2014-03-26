@@ -70,7 +70,7 @@ namespace sonar_wall_hough
     
   base::samples::SonarBeam BeamFilterDst::filter(base::samples::SonarBeam sonarBeam)
   {
-    //std::cout << "BeamFilterDst with type = " << type << std::endl;
+
     base::samples::SonarBeam filteredBeam(sonarBeam);
     if(type == minimum)
       minWindow->clear();
@@ -152,7 +152,7 @@ namespace sonar_wall_hough
 
   base::samples::SonarBeam BeamFilterPhi::filter(base::samples::SonarBeam sonarBeam)
   {
-    //std::cout << "BeamFilterPhi with type = " << type << std::endl;
+
     //organize last beams
     //clear deque if beam size has changed
     if(lastbeams.size() > 0 && lastbeams[0].beam.size() != sonarBeam.beam.size())
@@ -248,7 +248,7 @@ namespace sonar_wall_hough
     for(int i = minDistance; i < fullFilteredDst.beam.size(); i++)
     {
       strength = sqrt(fullFilteredDst.beam[i] * fullFilteredDst.beam[i] + fullFilteredPhi.beam[i] * fullFilteredPhi.beam[i]);
-      //std::cout << (int)strength << std::endl;
+
       if(strengthPre > threshold && strengthPre > strength && strengthPre >= strengthPrePre)
 	peaks.push_back(SonarPeak(fullFilteredDst.bearing, i-1, strengthPre));
       

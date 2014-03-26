@@ -52,11 +52,10 @@ boost::uint8_t* Houghspace::at(int angleIdx, int dstIdx)
     angleIdx += numberOfAngles;
     dstIdx *= -1;
   }
-  std::cout << "at says now angleIdx = " << angleIdx << ", dstIdx = "<<dstIdx<<std::endl;
+
   */
   if(dstIdx < -numberOfPosDistances || dstIdx > numberOfPosDistances)
   {
-    //std::cout << "returning 0 at angleIdx = " << angleIdx << ", dstIdx = " << dstIdx << std::endl;
     return 0;
   }
   else

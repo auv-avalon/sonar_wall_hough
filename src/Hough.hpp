@@ -168,6 +168,8 @@ public:
    */
   double getAvgError();
   
+  double getStandardDeviation();
+  
 private:
   /**
    * calculates the value the hough space has to be accumulated by
@@ -294,6 +296,8 @@ private:
   
   //Sum of the differences between calculated position and given external position
   double sumError;
+  
+  double sumSquareError;
   
   //Count of calculated differences, used to calculate the average error 
   int count;

@@ -10,6 +10,8 @@ Line::Line(double alpha, int d, int votes)
 {
 }
 
+bool Line::debug = false;
+
 bool Line::operator<(const Line& other) const
 {
   if(alpha < other.alpha)
@@ -296,7 +298,9 @@ std::vector< Line > Line::selectByDistance(std::vector< Line > lines, std::pair<
 
 std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int, int > basinSize, double spatialResolution, double angleTolerance, double basinOrientation, Houghspace& houghspace, double*& orientationDrift)
 {  
-  std::cout << "selecting lines with basin orientation = " << basinOrientation << " and tolerance " << angleTolerance << std::endl;
+  if(debug)
+    std::cout << "selecting lines with basin orientation = " << basinOrientation << " and tolerance " << angleTolerance << std::endl;
+  
   std::vector<Line> result;
   
   //for each line check if it is along x-axis of basin (horz), y-axis of basin (vert), or none
@@ -364,7 +368,9 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
     }
     */
   }
-  std::cout << "we have "<<linesVert.size()<<" vertical and " << linesHorz.size()<<" horizontal lines"<<std::endl;
+  
+  if(debug)
+    std::cout << "we have "<<linesVert.size()<<" vertical and " << linesHorz.size()<<" horizontal lines"<<std::endl;
     
   //check if there is a corresponding line or generate such (with votes from houghspace), generate score
   std::vector<LinePair> corrVert = findCorrecpondence(linesVert, basinSize.second/spatialResolution, houghspace);
@@ -372,7 +378,10 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
   
   if(corrHorz.empty() || corrVert.empty())
   {
-    std::cout << "at least one of the horz/vert vectors is empty. returning empty vector" << std::endl;
+    
+    if(debug)
+      std::cout << "at least one of the horz/vert vectors is empty. returning empty vector" << std::endl;
+    
     return result; //returns empty vector meaning "no valid lines found"
   }
   
@@ -445,14 +454,20 @@ std::vector<LinePair> Line::findCorrecpondence(std::vector< Line > lines, int di
   
   std::vector<LinePair> pairs;
   
-  std::cout << "wanting distance " << distance << std::endl;
+  if(debug)
+    std::cout << "wanting distance " << distance << std::endl;
+  
   for(int i = 0; i < lines.size(); i++)
   {
-    std::cout << "looking for best correspondence for line " << lines[i].alpha << "rad/"<<lines[i].d << std::endl;
+    
+    if(debug)
+      std::cout << "looking for best correspondence for line " << lines[i].alpha << "rad/"<<lines[i].d << std::endl;
     
     if(abs(lines[i].d) > distance)
     {
-      std::cout << "Line is too far away. skipping." << std::endl;
+      if(debug)
+	std::cout << "Line is too far away. skipping." << std::endl;
+
       continue;
     }
     
@@ -497,18 +512,26 @@ std::vector<LinePair> Line::findCorrecpondence(std::vector< Line > lines, int di
     //push best pair
     if(bestIdx != -1)
     {
-      std::cout << "found " << lines[bestIdx].alpha << "rad/" << lines[bestIdx].d << " -> score = " << score << std::endl;
+      if(debug)
+	std::cout << "found " << lines[bestIdx].alpha << "rad/" << lines[bestIdx].d << " -> score = " << score << std::endl;
+      
       pairs.push_back(LinePair(lines[i], lines[bestIdx], score));
     }
     else
     {
-      std::cout << "found none, creatin with score = " << score << std::endl;
+      if(debug)
+	std::cout << "found none, creatin with score = " << score << std::endl;
+      
       pairs.push_back(LinePair(lines[i], Line(lines[i].alpha, pd, pscore), score));
     }
     //std::cout << "are they different? " << pairs.back().a.d << " != " << pairs.back().b.d << std::endl;
   }
   
   return pairs;
+}
+
+void Line::setDebug(bool d){
+  debug = d;
 }
 
 } //end namespace

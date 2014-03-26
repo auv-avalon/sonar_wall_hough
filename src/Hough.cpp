@@ -37,9 +37,12 @@ Hough::Hough(const Config& config)
   minError=-1;
   maxError=-1;
   sumError=0;
+  sumSquareError=0;
   count=0;
   
   houghspace.clear();
+  
+  Line::setDebug(config.debug);
 }
 
 Hough::~Hough()
@@ -258,7 +261,6 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
 
 void Hough::analyzeHoughspace()
 {
-  std::cout << "analysis started" << std::endl;
   actualLines.clear();
   
   for(int dstIdx = -houghspace.getnumberOfPosDistances(); dstIdx <= houghspace.getnumberOfPosDistances(); dstIdx++)
@@ -269,12 +271,17 @@ void Hough::analyzeHoughspace()
       {
 	//found valid line
 	actualLines.push_back(Line(houghspace.idx2Angle(angleIdx), houghspace.idx2Dst(dstIdx), *(houghspace.uncheckedAt(angleIdx, dstIdx))));
-	std::cout << "Found Line: alpha = " << actualLines.back().alpha << "[" << actualLines.back().alpha*180.0/M_PI << "°], d = " << actualLines.back().d << ", votes: " << actualLines.back().votes << std::endl;
-	std::cout << "indices are angleIdx = " << angleIdx << ", dstIdx = " << dstIdx << std::endl;
+	
+	if(config.debug){
+	  std::cout << "Found Line: alpha = " << actualLines.back().alpha << "[" << actualLines.back().alpha*180.0/M_PI << "°], d = " << actualLines.back().d << ", votes: " << actualLines.back().votes << std::endl;
+	  std::cout << "indices are angleIdx = " << angleIdx << ", dstIdx = " << dstIdx << std::endl;
+	}
       }
     }
   }
-  std::cout << "found " << actualLines.size() << " Lines" << std::endl;
+  
+  if(config.debug)
+    std::cout << "found " << actualLines.size() << " Lines" << std::endl;
   postprocessLines();
   this->clear();
   
@@ -307,7 +314,6 @@ void Hough::clear()
   //clear allPeaks
   if(!config.poseCorrection || config.correctToFirstPosition) allPeaks.clear();
   
-  std::cout << "NewDataCount:" << newDataCount << std::endl;
   posPeaks.erase(posPeaks.begin(),posPeaks.end()-newDataCount);
   //posPeaks.clear();
   //posPeaks.erase(posPeaks.begin(),posPeaks.end());
@@ -348,7 +354,7 @@ void Hough::postprocessLines()
   
   //actualLines = Line::selectLines(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*4/180*M_PI), firstOrientation.getRad(), true, true);
   double* actualOrientationDrift = NULL;
-  actualLines = Line::selectLines2(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*8/180*M_PI), -firstOrientation.getRad(), houghspace, actualOrientationDrift); //orientation must be negative (heading of auv = - heading of basin in respect of auv)
+  actualLines = Line::selectLines2(actualLines, basinSize, lastSpatialResolution, config.sensorAngularTolerance/180 * M_PI, -firstOrientation.getRad(), houghspace, actualOrientationDrift); //orientation must be negative (heading of auv = - heading of basin in respect of auv)
   if(actualLines.size() < 4)
     return;
   
@@ -359,12 +365,14 @@ void Hough::postprocessLines()
     delete actualOrientationDrift;
   }
   
-  std::cout << "the lines are:" <<std::endl << "horz:" <<std::endl;
-  std::cout << "Line: alpha = " << actualLines[0].alpha << "[" << actualLines[0].alpha*180.0/M_PI << "°], d = " << actualLines[0].d << ", votes: " << actualLines[0].votes << std::endl;
-  std::cout << "Line: alpha = " << actualLines[1].alpha << "[" << actualLines[1].alpha*180.0/M_PI << "°], d = " << actualLines[1].d << ", votes: " << actualLines[1].votes << std::endl;
-  std::cout << "vert:\nLine: alpha = " << actualLines[2].alpha << "[" << actualLines[2].alpha*180.0/M_PI << "°], d = " << actualLines[2].d << ", votes: " << actualLines[2].votes << std::endl;
-  std::cout << "Line: alpha = " << actualLines[3].alpha << "[" << actualLines[3].alpha*180.0/M_PI << "°], d = " << actualLines[3].d << ", votes: " << actualLines[3].votes << std::endl;
-  
+  if(config.debug){
+    std::cout << "the lines are:" <<std::endl << "horz:" <<std::endl;
+    std::cout << "Line: alpha = " << actualLines[0].alpha << "[" << actualLines[0].alpha*180.0/M_PI << "°], d = " << actualLines[0].d << ", votes: " << actualLines[0].votes << std::endl;
+    std::cout << "Line: alpha = " << actualLines[1].alpha << "[" << actualLines[1].alpha*180.0/M_PI << "°], d = " << actualLines[1].d << ", votes: " << actualLines[1].votes << std::endl;
+    std::cout << "vert:\nLine: alpha = " << actualLines[2].alpha << "[" << actualLines[2].alpha*180.0/M_PI << "°], d = " << actualLines[2].d << ", votes: " << actualLines[2].votes << std::endl;
+    std::cout << "Line: alpha = " << actualLines[3].alpha << "[" << actualLines[3].alpha*180.0/M_PI << "°], d = " << actualLines[3].d << ", votes: " << actualLines[3].votes << std::endl;
+  }
+    
   calculateError();  
   
   //calculate position
@@ -372,7 +380,9 @@ void Hough::postprocessLines()
   double yScale = fabs(actualLines[0].d-actualLines[1].d) / config.basinHeight;
   double xPos = -(actualLines[2].d + actualLines[3].d) / 2 / xScale;
   double yPos = -(actualLines[0].d + actualLines[1].d) / 2 / yScale;
-  std::cout << "AUV at x = " << xPos << ", y = " << yPos << std::endl;
+  
+  if(config.debug)
+    std::cout << "AUV at x = " << xPos << ", y = " << yPos << std::endl;
   
   actualPosition.first = xPos;
   actualPosition.second = yPos;
@@ -408,11 +418,13 @@ void Hough::calculateError()
   
   supportRatio = (double)(lineSupporters[0]+lineSupporters[1]+lineSupporters[2]+lineSupporters[3])/nrOfPeaks;
   //cout the values
-  std::cout << "QUALITY OF MEASUREMENT:" << std::endl;
-  std::cout << "difference of parallel walls is " << basinWidthDiff << "m at x and " << basinHeightDiff << "m at y." << std::endl;
-  std::cout << "Mean square error of peaks is " << meanSqErr << std::endl;
-  std::cout << "the wall's supporters: " << lineSupporters[0] << ", " << lineSupporters[1] << ", " << lineSupporters[2] << ", " <<lineSupporters[3] << std::endl;
- 
+  
+  if(config.debug){
+    std::cout << "QUALITY OF MEASUREMENT:" << std::endl;
+    std::cout << "difference of parallel walls is " << basinWidthDiff << "m at x and " << basinHeightDiff << "m at y." << std::endl;
+    std::cout << "Mean square error of peaks is " << meanSqErr << std::endl;
+    std::cout << "the wall's supporters: " << lineSupporters[0] << ", " << lineSupporters[1] << ", " << lineSupporters[2] << ", " <<lineSupporters[3] << std::endl;
+  }
 }
 
 void Hough::setOrientation(double orientation)
@@ -537,7 +549,8 @@ void Hough::calcPositionError(){
     if(error > maxError || maxError==-1){
 	maxError=error;
     }  
-    sumError+=error;
+    sumError += error;
+    sumSquareError += (error * error);
     count++;
 } 
 
@@ -551,6 +564,10 @@ double Hough::getMaxError(){
 
 double Hough::getAvgError(){
   return sumError/count;
+} 
+
+double Hough::getStandardDeviation(){
+  return std::sqrt(sumSquareError/count);
 }  
 
 }//end namespace
