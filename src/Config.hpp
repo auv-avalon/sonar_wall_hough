@@ -28,6 +28,8 @@ namespace sonar_wall_hough
     bool correctToFirstPosition;
     double avalonSonarPose;
     bool debug;
+    
+    bool ignoreOrientation;
 
     Config()
 	: sensorAngularResolution(0.0)
@@ -44,6 +46,7 @@ namespace sonar_wall_hough
 	, basinWidth(0.0)
 	, gain(0)
 	, debug(false)
+        , ignoreOrientation(false)
     {
     }   
 

@@ -296,7 +296,96 @@ std::vector< Line > Line::selectByDistance(std::vector< Line > lines, std::pair<
   return lines;
 }
 
-std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int, int > basinSize, double spatialResolution, double angleTolerance, double basinOrientation, Houghspace& houghspace, double*& orientationDrift)
+std::vector<Line >  Line::selectLines3(std::vector<Line > lines, std::pair< int, int > basinSize, double spatialResolution, double angularTolerance, double basinOrientation, Houghspace& houghspace, double& orientationDrift){
+ 
+  if(debug)
+    std::cout << "selecting lines" << std::endl;
+  
+  std::vector<Line> result;
+  
+  //find best vertical lines
+  std::vector<LinePair> corrVert = findCorrecpondence(lines, basinSize.second/spatialResolution, houghspace);
+  
+  if(debug)
+    std::cout << "Found " << corrVert.size() << " vertical lines" << std::endl;
+  
+  if(corrVert.size() > 0){        
+    
+    std::vector<LineQuartet> lines_complete;
+    
+    for(std::vector<LinePair>::iterator it_pair = corrVert.begin(); it_pair != corrVert.end(); it_pair++){
+    
+      std::vector<Line> linesHorz;
+      for(std::vector<Line>::iterator it = lines.begin(); it != lines.end(); it++){
+        
+        //is line in 90 degree angle to the vertical line?
+        if( std::fabs( (it->alpha - M_PI/2) - it_pair->a.alpha ) < angularTolerance 
+          || std::fabs( (it->alpha + M_PI/2) - it_pair->a.alpha ) < angularTolerance){
+          linesHorz.push_back(*it);          
+        }
+        
+      }    
+    
+      std::vector<LinePair> corrHorz = findCorrecpondence(linesHorz, basinSize.first/spatialResolution, houghspace);
+      
+      for(std::vector<LinePair>::iterator it_horz = corrHorz.begin(); it_horz != corrHorz.end(); it_horz++){
+        
+        int new_score = (it_pair->score + it_horz->score) / 2.0;
+        LineQuartet quartet = LineQuartet(*it_pair, *it_horz, new_score);
+        
+        lines_complete.push_back(quartet);        
+      }
+    
+    }
+    
+    if(debug)
+      std::cout << "Found " << lines_complete.size() << " line quartets" << std::endl;
+    
+    //Find best line quartet    
+    if(lines_complete.size() > 0){
+      
+      LineQuartet best = lines_complete.front();
+      
+      for(std::vector<LineQuartet>::iterator it_quart = lines_complete.begin(); it_quart != lines_complete.end(); it_quart++){
+        
+        if(it_quart->score > best.score)
+          best = *it_quart;        
+      }
+      
+      result.push_back(best.horz.a);
+      result.push_back(best.horz.b);
+      result.push_back(best.vert.a);
+      result.push_back(best.vert.b);
+      
+      for(std::vector<Line>::iterator it_line = result.begin(); it_line != result.end(); it_line++){
+        
+        if(it_line->alpha < -M_PI/2.0){
+          it_line->alpha += M_PI;
+          it_line->d *= -1;
+        }
+        
+        if(it_line->alpha > M_PI/2.0){
+          it_line->alpha -= M_PI;
+          it_line->d *= -1;
+        }
+          
+      }
+      
+      
+      
+      rectifyLines(result, basinOrientation, orientationDrift);
+      
+    }else{
+      return result;
+    }    
+    
+  }  
+  
+  return result;
+}  
+
+
+std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int, int > basinSize, double spatialResolution, double angleTolerance, double basinOrientation, Houghspace& houghspace, double& orientationDrift)
 {  
   if(debug)
     std::cout << "selecting lines with basin orientation = " << basinOrientation << " and tolerance " << angleTolerance << std::endl;
@@ -405,47 +494,67 @@ std::vector< Line > Line::selectLines2(std::vector< Line > lines, std::pair< int
   result.push_back(corrVert[bestIdx].a);
   result.push_back(corrVert[bestIdx].b);
   
-  //calculate orientationDrift
-  double actualOrientation = 0.0;
-  int votes = 0;
-  if(result[0].alpha >= 0.0)
-    actualOrientation += (result[0].alpha - M_PI/2) * result[0].votes;
-  else
-    actualOrientation += (result[0].alpha + M_PI/2) * result[0].votes;
-  votes += result[0].votes;
-  if(result[1].alpha >= 0.0)
-    actualOrientation += (result[1].alpha - M_PI/2) * result[1].votes;
-  else
-    actualOrientation += (result[1].alpha + M_PI/2) * result[1].votes;
-  votes += result[1].votes;
-  actualOrientation += (result[2].alpha) * result[2].votes;
-  votes += result[2].votes;
-  actualOrientation += (result[3].alpha) * result[3].votes;
-  votes += result[3].votes;
-  actualOrientation /= votes;
-  orientationDrift = new double(actualOrientation - basinOrientation);
-  
-  //rectify lines
-  //result[0,1] must be actualOrientation + M_PI/2
-  //result[2,3] must be actualOrientation
-  if(fabs(result[0].alpha - (actualOrientation+M_PI/2)) > M_PI/2)
-    result[0].d *= -1;
-  result[0].alpha = actualOrientation + M_PI/2;
-  
-  if(fabs(result[1].alpha - (actualOrientation+M_PI/2)) > M_PI/2)
-    result[1].d *= -1;
-  result[1].alpha = actualOrientation + M_PI/2;
-  
-  if(fabs(result[2].alpha - (actualOrientation)) > M_PI/2)
-    result[2].d *= -1;
-  result[2].alpha = actualOrientation;
-  
-  if(fabs(result[3].alpha - (actualOrientation)) > M_PI/2)
-    result[3].d *= -1;
-  result[3].alpha = actualOrientation;
+  rectifyLines(result, basinOrientation, orientationDrift);
   
   return result;
 }
+
+void Line::rectifyLines(std::vector<Line> &lines, double basinOrientation, double &orientationDrift){
+
+  if(lines.size() < 4)
+    return;  
+  
+  if(debug){
+    std::cout << "Rectify lines" << std::endl;
+    std::cout << "Horizontal lines: " << std::endl;
+    std::cout << "angle: " << lines[0].alpha << " d " << lines[0].d << " votes " << lines[0].votes << std::endl;
+    std::cout << "angle: " << lines[1].alpha << " d " << lines[1].d << " votes " << lines[1].votes << std::endl;
+    std::cout << "Vertical lines: " << std::endl;
+    std::cout << "angle: " << lines[2].alpha << " d " << lines[2].d << " votes " << lines[2].votes << std::endl;
+    std::cout << "angle: " << lines[3].alpha << " d " << lines[3].d << " votes " << lines[3].votes << std::endl;
+  }
+  
+  //calculate orientationDrift
+  double actualOrientation = 0.0;
+  int votes = 0;
+  if(lines[0].alpha >= 0.0)
+    actualOrientation += (lines[0].alpha - M_PI/2) * lines[0].votes;
+  else
+    actualOrientation += (lines[0].alpha + M_PI/2) * lines[0].votes;
+  votes += lines[0].votes;
+  if(lines[1].alpha >= 0.0)
+    actualOrientation += (lines[1].alpha - M_PI/2) * lines[1].votes;
+  else
+    actualOrientation += (lines[1].alpha + M_PI/2) * lines[1].votes;
+  votes += lines[1].votes;
+  actualOrientation += (lines[2].alpha) * lines[2].votes;
+  votes += lines[2].votes;
+  actualOrientation += (lines[3].alpha) * lines[3].votes;
+  votes += lines[3].votes;
+  actualOrientation /= votes;
+  orientationDrift = actualOrientation - basinOrientation;
+  
+  //rectify lines
+  //lines[0,1] must be actualOrientation + M_PI/2
+  //lines[2,3] must be actualOrientation
+  if(fabs(lines[0].alpha - (actualOrientation+M_PI/2)) > M_PI/2)
+    lines[0].d *= -1;
+  lines[0].alpha = actualOrientation + M_PI/2;
+  
+  if(fabs(lines[1].alpha - (actualOrientation+M_PI/2)) > M_PI/2)
+    lines[1].d *= -1;
+  lines[1].alpha = actualOrientation + M_PI/2;
+  
+  if(fabs(lines[2].alpha - (actualOrientation)) > M_PI/2)
+    lines[2].d *= -1;
+  lines[2].alpha = actualOrientation;
+  
+  if(fabs(lines[3].alpha - (actualOrientation)) > M_PI/2)
+    lines[3].d *= -1;
+  lines[3].alpha = actualOrientation;  
+  
+}
+
 
 std::vector<LinePair> Line::findCorrecpondence(std::vector< Line > lines, int distance, Houghspace& houghspace)
 {

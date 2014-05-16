@@ -353,17 +353,18 @@ void Hough::postprocessLines()
   std::pair<int,int> basinSize(config.basinHeight, config.basinWidth);
   
   //actualLines = Line::selectLines(actualLines, basinSize, lastSpatialResolution, (config.sensorAngularResolution*4/180*M_PI), firstOrientation.getRad(), true, true);
-  double* actualOrientationDrift = NULL;
-  actualLines = Line::selectLines2(actualLines, basinSize, lastSpatialResolution, config.sensorAngularTolerance/180 * M_PI, -firstOrientation.getRad(), houghspace, actualOrientationDrift); //orientation must be negative (heading of auv = - heading of basin in respect of auv)
+
+  if(config.ignoreOrientation)
+    actualLines = Line::selectLines3(actualLines, basinSize, lastSpatialResolution, config.sensorAngularTolerance/180 * M_PI, -firstOrientation.getRad(), houghspace, orientationDrift);
+  else  
+    actualLines = Line::selectLines2(actualLines, basinSize, lastSpatialResolution, config.sensorAngularTolerance/180 * M_PI, -firstOrientation.getRad(), houghspace, orientationDrift); //orientation must be negative (heading of auv = - heading of basin in respect of auv)
+  
+  
   if(actualLines.size() < 4)
     return;
   
-  if(actualOrientationDrift != NULL)
-  {
-    orientationDriftDetected = true;
-    orientationDrift = *actualOrientationDrift;
-    delete actualOrientationDrift;
-  }
+  orientationDriftDetected = true;
+
   
   if(config.debug){
     std::cout << "the lines are:" <<std::endl << "horz:" <<std::endl;

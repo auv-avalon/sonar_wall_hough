@@ -14,6 +14,8 @@ namespace sonar_wall_hough
 {
   struct LinePair;
   
+  struct LineQuartet;
+  
   /**
    * The class Line represents a line by the angle of its normal and its distance to the origin
    * Additionally, each line coontains a value that shows how many votes in hough-transform this line received
@@ -73,7 +75,30 @@ namespace sonar_wall_hough
      * @param orientation an output parameter that shows the difference of the given basinOrientation and the orientation gotten from the fitting lines
      * @return a vector of the 4 chosen lines
      */
-    static std::vector<Line> selectLines2(std::vector<Line> lines, std::pair<int,int> basinSize, double spatialResolution, double angleTolerance, double basinOrientation, Houghspace& houghspace, double*& orientationDrift);
+    static std::vector<Line> selectLines2(std::vector<Line> lines, std::pair<int,int> basinSize, double spatialResolution, double angleTolerance, double basinOrientation, Houghspace& houghspace, double& orientationDrift);
+    
+    
+    /**
+     * line selecting algorithm, ignores the vehicle orientation and choses the best scored lines
+     * @param lines found by hough
+     * @param basinSize size of the basin (width, height)
+     * @param spatialResolution the resolution of the sonar for calculating from bins to meters
+     * @param angleTolerance the lines may be about that off of the basin orientation
+     * @param basinOrientation the orientation of the basin with respect to the vehicle (from FOG)
+     * @param houghspace the houghspace to create some other lines if needed
+     * @param orientation an output parameter that shows the difference of the given basinOrientation and the orientation gotten from the fitting lines
+     * @return a vector of the 4 chosen lines
+     */
+    static std::vector<Line > selectLines3(std::vector<Line > lines, std::pair< int, int > basinSize, double spatialResolution, double angularTolerance, double basinOrientation, Houghspace& houghspace, double& orientationDrift);
+    
+    
+    /**
+     * Rectifies the found lines
+     * @param lines found lines, size of vector needs to be 4
+     * @param basinOrientation orientation of the basin
+     * @param orientationDrift the to be calculated orientationdrift
+     */
+    static void rectifyLines(std::vector<Line> &lines, double basinOrientation, double &orientationDrift);
     
     static void setDebug(bool d);
   
@@ -111,5 +136,15 @@ namespace sonar_wall_hough
      */
     LinePair(Line a, Line b, int score):a(a),b(b),score(score){};
   };
+  
+  struct LineQuartet
+  {
+    
+    LinePair vert,horz;
+    int score;
+    
+    LineQuartet(LinePair vert, LinePair horz, int score):vert(vert), horz(horz), score(score){};    
+  }; 
+  
 }
 #endif // _SONAR_WALL_HOUGH_LINE_HPP_
