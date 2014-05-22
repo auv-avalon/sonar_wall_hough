@@ -382,6 +382,16 @@ void Hough::postprocessLines()
   double xPos = -(actualLines[2].d + actualLines[3].d) / 2 / xScale;
   double yPos = -(actualLines[0].d + actualLines[1].d) / 2 / yScale;
   
+  if(config.ignoreOrientation){
+    
+    if(firstOrientation.rad > M_PI / 2.0 || firstOrientation.rad < - M_PI / 2.0){
+      xPos *= -1.0;
+      yPos *= -1.0;      
+    }    
+  }
+    
+  
+  
   if(config.debug)
     std::cout << "AUV at x = " << xPos << ", y = " << yPos << std::endl;
   
