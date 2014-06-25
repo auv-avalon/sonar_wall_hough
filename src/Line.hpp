@@ -116,7 +116,7 @@ namespace sonar_wall_hough
      * @param houghspace the houghspace to create another line if needed
      * @return the pair of lines
      */
-    static std::vector<LinePair> findCorrecpondence(std::vector<Line> lines, int distance, Houghspace& houghspace);
+    static std::vector<LinePair> findCorrecpondence(std::vector<Line> lines, int distance, Houghspace& houghspace, double angularTolerance = 2 * M_PI);
         
   };
   

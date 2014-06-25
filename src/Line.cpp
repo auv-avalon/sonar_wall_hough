@@ -304,7 +304,7 @@ std::vector<Line >  Line::selectLines3(std::vector<Line > lines, std::pair< int,
   std::vector<Line> result;
   
   //find best vertical lines
-  std::vector<LinePair> corrVert = findCorrecpondence(lines, basinSize.second/spatialResolution, houghspace);
+  std::vector<LinePair> corrVert = findCorrecpondence(lines, basinSize.second/spatialResolution, houghspace, angularTolerance);
   
   if(debug)
     std::cout << "Found " << corrVert.size() << " vertical lines" << std::endl;
@@ -326,7 +326,7 @@ std::vector<Line >  Line::selectLines3(std::vector<Line > lines, std::pair< int,
         
       }    
     
-      std::vector<LinePair> corrHorz = findCorrecpondence(linesHorz, basinSize.first/spatialResolution, houghspace);
+      std::vector<LinePair> corrHorz = findCorrecpondence(linesHorz, basinSize.first/spatialResolution, houghspace, angularTolerance);
       
       for(std::vector<LinePair>::iterator it_horz = corrHorz.begin(); it_horz != corrHorz.end(); it_horz++){
         
@@ -556,7 +556,7 @@ void Line::rectifyLines(std::vector<Line> &lines, double basinOrientation, doubl
 }
 
 
-std::vector<LinePair> Line::findCorrecpondence(std::vector< Line > lines, int distance, Houghspace& houghspace)
+std::vector<LinePair> Line::findCorrecpondence(std::vector< Line > lines, int distance, Houghspace& houghspace, double angularTolerance)
 {
   //sigma for normal distribution for scoring
   double sigmasq = - (0.01*distance*distance)/(2*log(0.1));
@@ -591,6 +591,10 @@ std::vector<LinePair> Line::findCorrecpondence(std::vector< Line > lines, int di
       //lines must lie on opposite sides of origin (i.e. different signs in dst)
       if(lines[i].d<0 == lines[j].d<0)
 	continue;
+      
+      //lines must have an similar angle
+      if( std::fabs(lines[i].alpha - lines[j].alpha) > angularTolerance)
+        continue;
       
       int dstDiff = abs(lines[i].d - lines[j].d) - distance;
       int tscore = (lines[i].votes + lines[j].votes) * exp(-0.5*dstDiff*dstDiff/sigmasq)-0.1;//make score
