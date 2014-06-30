@@ -155,10 +155,10 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
   
   //correct angle for this beam
   double actAngle = beam.bearing.getRad();
-  beam.bearing = beam.bearing + (lastOrientation - firstOrientation);
-  //base::Angle bla = base::Angle::fromRad(angleCorrect);
-  //std::cout << "angle is " << beam.bearing << ", should be " << bla << std::endl;
+  beam.bearing = beam.bearing + lastOrientation; //Global orientation of beam
+  //beam.bearing = beam.bearing + (lastOrientation - firstOrientation);
   
+ 
   std::vector<SonarPeak> peaks = filter.filter(beam, (int)(config.minDistance/beam.getSpatialResolution()));
   //std::cout << "registering beam with " << peaks.size() << " peaks" << std::endl;
   lastSpatialResolution = beam.getSpatialResolution();
@@ -166,10 +166,6 @@ void Hough::registerBeam(base::samples::SonarBeam beam)
   
   //accumulate peaks to houghspace (all peaks have the same bearing)
   if(!peaks.empty()){
-    //std::cout << "PEAKS: " << peaks.size() << std::endl;
-    
-    //for(std::vector<SonarPeak>::iterator it = peaks.begin(); it < peaks.end(); it++)
-    //	std::cout << "Distance " <<it->distance << " Str "<< int(it->strength)<< std::endl; 
        
     if(config.poseCorrection){
           
@@ -382,14 +378,20 @@ void Hough::postprocessLines()
   double xPos = -(actualLines[2].d + actualLines[3].d) / 2 / xScale;
   double yPos = -(actualLines[0].d + actualLines[1].d) / 2 / yScale;
   
-  if(config.ignoreOrientation){
+  //Convert orientation-drift to valid scale
+  while(orientationDrift > M_PI)
+    orientationDrift -= 2.0 * M_PI;
     
-    if(firstOrientation.rad > M_PI / 2.0 || firstOrientation.rad < - M_PI / 2.0){
-      xPos *= -1.0;
-      yPos *= -1.0;      
-    }    
-  }
-    
+  while(orientationDrift < M_PI)
+    orientationDrift += 2.0 * M_PI;   
+      
+
+  //Convert the orientationdrift to scale between -PI/2  and PI/2  
+  while(orientationDrift > M_PI / 2.0)
+    orientationDrift -= M_PI;
+  
+  while(orientationDrift < -M_PI / 2.0)
+    orientationDrift += M_PI;  
   
   
   if(config.debug)

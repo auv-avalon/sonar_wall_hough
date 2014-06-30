@@ -301,6 +301,27 @@ std::vector<Line >  Line::selectLines3(std::vector<Line > lines, std::pair< int,
   if(debug)
     std::cout << "selecting lines" << std::endl;
   
+  for(std::vector<Line>::iterator it = lines.begin(); it != lines.end(); it++)
+  {
+    //bring line to same angle region as basin
+    if((it->alpha - basinOrientation) > M_PI/2) // line angle too big
+    {
+      while((it->alpha - basinOrientation) > M_PI/2)
+      {
+        it->alpha -= M_PI;
+        it->d *= -1;
+      }
+    }
+    if((basinOrientation - it->alpha) > M_PI/2) // line angle too small
+    {
+      while((basinOrientation - it->alpha) > M_PI/2)
+      {
+        it->alpha += M_PI;
+        it->d *= -1;
+      }
+    }  
+  }
+  
   std::vector<Line> result;
   
   //find best vertical lines
@@ -315,6 +336,7 @@ std::vector<Line >  Line::selectLines3(std::vector<Line > lines, std::pair< int,
     
     for(std::vector<LinePair>::iterator it_pair = corrVert.begin(); it_pair != corrVert.end(); it_pair++){
     
+      //Search vor cerrespondig horizontal lines
       std::vector<Line> linesHorz;
       for(std::vector<Line>::iterator it = lines.begin(); it != lines.end(); it++){
         
@@ -328,6 +350,7 @@ std::vector<Line >  Line::selectLines3(std::vector<Line > lines, std::pair< int,
     
       std::vector<LinePair> corrHorz = findCorrecpondence(linesHorz, basinSize.first/spatialResolution, houghspace, angularTolerance);
       
+      //Combine line pairs to quartets
       for(std::vector<LinePair>::iterator it_horz = corrHorz.begin(); it_horz != corrHorz.end(); it_horz++){
         
         int new_score = (it_pair->score + it_horz->score) / 2.0;
@@ -352,6 +375,20 @@ std::vector<Line >  Line::selectLines3(std::vector<Line > lines, std::pair< int,
           best = *it_quart;        
       }
       
+      //Convert horizontal lines to an angle + PI/2
+      if(fabs(M_PI/2 - (basinOrientation - best.horz.a.alpha) ) < angularTolerance)
+      {
+        best.horz.a.alpha += M_PI;
+        best.horz.a.d *= -1;
+      }
+      
+      if(fabs(M_PI/2 - (basinOrientation - best.horz.b.alpha) ) < angularTolerance)
+      {
+        best.horz.b.alpha += M_PI;
+        best.horz.b.d *= -1;
+      }      
+      
+      
       result.push_back(best.horz.a);
       result.push_back(best.horz.b);
       result.push_back(best.vert.a);
@@ -369,8 +406,7 @@ std::vector<Line >  Line::selectLines3(std::vector<Line > lines, std::pair< int,
           it_line->d *= -1;
         }
           
-      }
-      
+      }     
       
       
       rectifyLines(result, basinOrientation, orientationDrift);
